@@ -1,6 +1,6 @@
 # 黑客松技术设计：Nara Home Rescue
 
-2026-10-25 · 作者 Brad（由 Claude 起草）· 第二稿：§12 的五个问题 Brad 10-25 已定，等 Nagisa 看过后定稿，定稿前不写代码
+2026-10-25 · 作者 Brad（由 Claude 起草）· 第二稿：§12 的六个问题 Brad 10-25 已定，等 Nagisa 看过后定稿，定稿前不写代码
 
 Nara 入选了 YC Haunted Hacks（2026-10-31，旧金山 YC 办公室，16:00 截止提交）。产品需求按 Nagisa 10-25 发在 Discord #engineering 的 PRD（"Nara Home Rescue"，下称 PRD）。本文定的是：PRD 里的 P0 功能分别落在 durable-actors、Agent Relay 和 Supabase 的哪一部分，前后端之间的接口，以及到 10-31 的排期。主办方已经同意 Brad 提前写代码。
 
@@ -111,7 +111,7 @@ runner 执行每一步的固定顺序：
 - **工单数据在 Supabase 里有一份副本**：`case_summary`（每个工单一行：home、status、checkpoint）和 `case_event`（每个事件一行，`(case_id, seq)` 唯一）。runner 用 upsert 写入，重复写不会多出行。崩溃后 runner 比较 actor 和 Supabase 里各自最新的 `seq`，把缺的补上。
 - **实时推送用 Supabase Realtime**：浏览器订阅 `case_event` 里本工单的新行。这比轮询省事，也让 Supabase 承担一件评委看得见的事。Realtime 断了就退回每秒拉一次 `GET /api/cases/:id`。
 - **权限**：浏览器用 anon key，只能读 demo home 的数据；所有写入走服务端（runner 和 Next.js route handler），用 service role key。
-- **项目**：新开一个 Supabase 项目，不碰 Nara 正式产品用的 `nara-preview`。现场每人有 25 美元 Supabase credits。开在谁的账号下见 §12。
+- **项目**：新开一个 Supabase 项目，不碰 Nara 正式产品用的 `nara-preview`。现场每人有 25 美元 Supabase credits。开在 Nagisa 的账号下（§12）。
 
 ## 7. 前后端接口（Nagisa 按这个写前端）
 
@@ -183,7 +183,7 @@ interface HistoryEntry { date: string; summary: string; caseId?: string }
 
 验收用 PRD 第 7 节的 10 条。其中前 9 条写成自动化测试，在 runner 和 actors 上跑；第 10 条（Devpost、录屏、repo）在 10-30 人工检查。
 
-## 12. 已定和待定的问题
+## 12. 已定的问题
 
 已定（Brad 10-25）：
 
@@ -193,6 +193,4 @@ interface HistoryEntry { date: string; summary: string; caseId?: string }
 4. Relay 的 `idempotencyKey` 会去重，已实测，结论写在 §2，设计按它改成了发件箱（§4）。
 5. 争 Supabase 的奖，设计见 §6。
 
-待定：
-
-1. Supabase 项目开在谁的账号下？建议开在 Nagisa 的账号下，和 repo 一样归 Nara 团队，Brad 作为成员。
+6. Supabase 项目开在 Nagisa 的账号下，Brad 作为成员；service role key 放进 runner 和 web 不提交的 `.env`。
