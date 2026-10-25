@@ -38,7 +38,7 @@ Nara 入选了 YC Haunted Hacks（2026-10-31，旧金山 YC 办公室，16:00 �
 - **`idempotencyKey` 会去重**（10-25 实测）：同一个 key、同样的内容再发一次，返回同一个 message id，channel 里只有一条；换一个新进程用同一个 agent 发也一样。同一个 key、内容不同，直接报 409 `idempotency_key_reused`。所以重发必须原样重发崩溃前那一条（§4 的发件箱）。
 - **同名 agent 不能重复注册**（10-25 实测）：文档说重复注册会接管原来的身份，但 8.16.0 里这个功能已经废弃，第二次注册直接报 409 `agent_already_exists`。所以第一次注册时把 agent 的 token 存下来，之后每次启动都用 `workspace.reconnect({ apiToken })` 接回原来的身份（实测可用）。
 
-**Supabase**：新建的表默认开着 RLS 而且没有策略，浏览器用 anon key 读到的是空数组，不报错。所以浏览器要读的每张表都要写 anon 的 `select` 策略。
+**Supabase**：用 Nara 现有的 `nara-preview` 项目（§6）。从 Brad 的 Mac 直连主机只有 IPv6，要走 session pooler（`aws-0-us-east-1.pooler.supabase.com:5432`，用户名 `<角色>.<project ref>`），pooler 的证书链是自签的，要设 `DATABASE_SSL=insecure`，和 Nara 正式产品的连法一样。Supabase 给新表自动开 RLS；我们的角色只在自己的 schema 里，表都由服务端读写，所以在这个 schema 里关掉 RLS。
 
 ## 3. 总体结构
 
@@ -131,8 +131,10 @@ Nara 入选了 YC Haunted Hacks（2026-10-31，旧金山 YC 办公室，16:00 �
 
 - **Home Twin 放在 Supabase**：`home`、`equipment`、`service_history` 三张表。这类数据要跨工单查询，以后还要按 home 做权限，是 Postgres 擅长的事。每个工单的流程状态放在各自的 actor 里，互不影响，工单再多也只是多几个 actor。这就是 Devpost 上讲扩展性的说法：流程状态按工单分散在 actor 里，跨工单的数据集中在 Postgres。
 - **`case_summary`**：每个工单一行（id、home_id、status、checkpoint、updated_at），由 web 创建、coordinator 更新。它只是一个索引，用来发现没结束的工单；状态以 actor 为准。
-- **权限**：浏览器用 anon key，`home`、`equipment`、`service_history` 各写一条 anon 的 `select` 策略；`case_summary` 只有服务端读写。所有写入走服务端（两个 runner 和 Next.js route handler），用 service role key，这个 key 的环境变量名不带 `NEXT_PUBLIC_` 前缀。
-- **项目**：新开一个 Supabase 项目，开在 Nagisa 的账号下，Brad 作为成员；不碰 Nara 正式产品用的 `nara-preview`。
+- **项目**：用 Nara 现有的 `nara-preview`（Brad 10-25 定），不新开项目。
+- **单独的 schema**：所有表建在 `home_rescue` 这个 schema 里，不碰 `public`。`public` 里有 Nara 正式产品的 `home`、`equipment`、`booking`、`provider` 等表，和这里的表重名；分开放，名字不会撞，黑客松结束后整个 schema 删掉就干净了。
+- **单独的数据库角色**：建一个 `home_rescue_app`，只有 `home_rescue` 这个 schema 的读写权限，碰不到 `public`。`nara-preview` 里有真实 homeowner 的数据，而黑客松的代码和 `.env` 要放到 Nagisa 的电脑上去现场跑，所以不能用 `postgres` 或 `nara_app` 的连接串。
+- **浏览器不直接连 Supabase**：所有读写都在服务端（两个 runner 和 Next.js route handler），用 `pg` 通过 pooler 连接，连接串 `HOME_RESCUE_DATABASE_URL` 放在不提交的 `.env` 里。所以不需要 anon key，也不需要 RLS 策略。
 - P1：工单事件的副本和 Realtime 推送。第二稿里是 P0，审稿后撤下：代码最多、demo 里最看不见，而且网页每秒拉一次 actor 已经够用。10-30 有空再加。
 
 ## 7. 前后端接口（Nagisa 按这个写前端）
@@ -208,8 +210,8 @@ Relay 的只读观察页链接放在环境变量 `NEXT_PUBLIC_RELAY_OBSERVER_URL
 
 | 日期 | Brad | Nagisa |
 |---|---|---|
-| 10-26（日） | 和 Nagisa 一起定稿本文；交 fixture JSON | 定稿；建 repo 和 Supabase 项目；搭前端骨架 |
-| 10-27 | actors：ServiceCase、ProviderCalendar；Supabase 四张表、策略、种子数据；两个自动化测试 | 四个页面接 fixture |
+| 10-26（日） | 和 Nagisa 一起定稿本文；交 fixture JSON | 定稿；建 repo；搭前端骨架 |
+| 10-27 | actors：ServiceCase、ProviderCalendar；在 `nara-preview` 里建 `home_rescue` schema、`home_rescue_app` 角色、四张表和种子数据；两个自动化测试 | 四个页面接 fixture |
 | 10-28 | coordinator 和 provider：Relay 收发、补拉、诊断 prompt、模板消息；正常流程跑通 | 继续页面，接 `GET /api/home`、`POST /api/cases`、`GET /api/cases/:id` |
 | 10-29 | 两种中断、supervisor、出错的统一处理、新工单轮询 | Recovery Monitor、两个中断按钮 |
 | 10-30 | 在 Nagisa 的电脑上完整彩排，录备用视频，写 Devpost 草稿 | 同左 |
@@ -226,5 +228,5 @@ Relay 的只读观察页链接放在环境变量 `NEXT_PUBLIC_RELAY_OBSERVER_URL
 3. OpenAI 用 Nara 现有的 key。
 4. Relay 的 `idempotencyKey` 会去重，已实测，结论写在 §2，设计按它用了发件箱（§4）。
 5. 争 Supabase 的奖，设计见 §6。
-6. Supabase 项目开在 Nagisa 的账号下，Brad 作为成员；service role key 放进 runner 和 web 不提交的 `.env`。
+6. Supabase 用 Nara 现有的 `nara-preview`，表放在单独的 `home_rescue` schema 里，用只能访问这个 schema 的 `home_rescue_app` 角色连接（§6）。
 7. 审稿后的四项改动都采纳：维修商 agent 独立成进程、通过 Relay 被动响应（§3、§4）；杀 actor 进程提到 P0（§5）；撤下工单事件副本和 Realtime，网页每秒拉 actor（§6、§7）；只有诊断用 LLM（§4、§9）。
