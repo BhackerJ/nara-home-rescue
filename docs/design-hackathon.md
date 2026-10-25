@@ -202,8 +202,7 @@ Relay 的只读观察页链接放在环境变量 `NEXT_PUBLIC_RELAY_OBSERVER_URL
 - Nagisa 在现场用她的 Mac 跑：`npm run demo` 同时起 actors、coordinator、provider、web 四个进程，每个都带 supervisor。事先装好 Bun 和 Node 22。Relay 的 token 文件和 workspace 在 10-30 彩排时在她的电脑上生成，之后不删。
 - Agent Relay 和 Supabase 都是托管服务，需要现场网络。带手机热点做第二条网络。备用方案：录一段完整的 demo 视频，网络不行就放视频。
 - 一次完整的流程有 60–90 秒是在等（五条 Relay 消息、一次 LLM、两次重启）。Nagisa 的讲稿要把每一段等待填上：等维修商回复时讲 Relay 上的消息，重启时讲 Recovery Monitor 上的事件。
-- Devpost 页面上写一句：主办方同意了赛前写代码。评委里有不是主办方的人，不写会被当成违规。
-- PRD 第 3 节的流程图是"中断 → 恢复 → 维修商拒绝 → 重新协商"，本设计是在等维修商回复时中断，恢复后拿到拒绝再协商。请 Nagisa 把 PRD 的图、讲稿和 Devpost 改成一致。
+- PRD 第 3 节的流程图是"中断 → 恢复 → 维修商拒绝 → 重新协商"，本设计是在等维修商回复时中断，恢复后拿到拒绝再协商。请 Nagisa 把 PRD 的图和讲稿改成一致。
 - Brad 11:00–16:00 远程在线，随时处理问题。
 
 ## 11. 排期
