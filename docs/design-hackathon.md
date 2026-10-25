@@ -115,7 +115,7 @@ Nara 入选了 YC Haunted Hacks（2026-10-31，旧金山 YC 办公室，16:00 �
 
 两种中断，都是 P0，demo 里两种都演：
 
-**杀 runner。** "Interrupt worker" 按钮调 `POST /api/cases/:id/interrupt`，写入 `ServiceCase.armInterrupt()`。它的含义是"coordinator 做完下一步就退出"，不绑定具体哪一步，这样 Nagisa 讲到哪里按都有效；报修表单上另有一个预设中断的勾选框，勾上等于一建工单就预设好。预期的中断点是第 2 步之后、等维修商回复的时候：runner 死的时候维修商的拒绝到达 Relay，重启后 coordinator 从 Relay 上补拉到这条拒绝，直接做第 4 步，前面的诊断不重做，intake 不重来。这一段是整个 demo 的核心。
+**杀 runner。** "Interrupt worker" 按钮调 `POST /api/cases/:id/interrupt`，写入 `ServiceCase.armInterrupt()`。它的含义是"coordinator 做完下一步就退出"，不绑定具体哪一步，这样 Nagisa 讲到哪里按都有效；报修表单上另有一个预设中断的勾选框，勾上就固定在第 2 步（发出时段请求）之后退出，正好落在下面说的中断点上。预期的中断点是第 2 步之后、等维修商回复的时候：runner 死的时候维修商的拒绝到达 Relay，重启后 coordinator 从 Relay 上补拉到这条拒绝，直接做第 4 步，前面的诊断不重做，intake 不重来。这一段是整个 demo 的核心。
 
 - coordinator 退出前在 actor 里记下 `interrupt_fired { step, bootId, pid }`。
 - `supervise.sh` 发现进程退出后重新拉起，等待时间 3 秒起、每次翻倍、最多 30 秒；带 pidfile，防止两个 coordinator 同时跑。3 秒是故意留的，让观众看清 worker 确实断了。
