@@ -2,7 +2,13 @@ import { ALTERNATE_SLOT, REQUESTED_SLOT } from "@/contracts/case";
 import type { DemoFrame } from "@/demo/script";
 import { NaraMark } from "./NaraMark";
 
-export function ShopPane({ frame }: { frame: DemoFrame }) {
+export function ShopPane({
+  frame,
+  onConfirm,
+}: {
+  frame: DemoFrame;
+  onConfirm?: () => void;
+}) {
   return (
     <section aria-label="HVAC shop" className="flex min-h-0 flex-col">
       <p className="mb-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">
@@ -43,7 +49,9 @@ export function ShopPane({ frame }: { frame: DemoFrame }) {
                     <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-muted">
                       Technician-ready packet
                     </p>
-                    <h2 className="nara-serif mt-1 text-[28px] leading-tight">AC isn’t cooling</h2>
+                    <h2 className="nara-serif mt-1 text-[28px] leading-tight">
+                      {frame.live?.issue || "AC isn’t cooling"}
+                    </h2>
                     <p className="mt-1 text-[15px] text-ink/70">1847 Maple Street, Hayward</p>
                   </div>
                   <p className="font-mono text-[13px] text-muted">{frame.caseId}</p>
@@ -72,15 +80,26 @@ export function ShopPane({ frame }: { frame: DemoFrame }) {
                       Assessment
                     </dt>
                     <dd className="mt-1 text-[16px]">
-                      Context for the visit. Not a confirmed capacitor fault.
+                      {frame.live?.assessment ??
+                        "Context for the visit. Not a confirmed capacitor fault."}
                     </dd>
                   </div>
                 </dl>
               </article>
 
-              <Appointment frame={frame} />
+              <Appointment frame={frame} onConfirm={onConfirm} />
 
-              {frame.stage === "recovery" ? (
+              {frame.live?.recovery ? (
+                <p className="rounded-2xl bg-gold-soft px-4 py-3 text-[15px] leading-snug">
+                  Coordinator came back:{" "}
+                  <span className="font-mono text-[17px] font-semibold">
+                    pid {frame.live.recovery.previousPid} → pid {frame.live.recovery.pid}
+                  </span>
+                  , resumed from {frame.live.recovery.fromCheckpoint}. Case reloaded from Durable
+                  Actors; missed messages caught up from Agent Relay. The assessment above was not
+                  rewritten.
+                </p>
+              ) : frame.stage === "recovery" ? (
                 <p className="rounded-2xl bg-gold-soft px-4 py-3 text-[15px] leading-snug">
                   Simulated resume from checkpoint slot_requested. The assessment above was not
                   rewritten. No process was stopped.
@@ -94,15 +113,18 @@ export function ShopPane({ frame }: { frame: DemoFrame }) {
   );
 }
 
-function Appointment({ frame }: { frame: DemoFrame }) {
+function Appointment({ frame, onConfirm }: { frame: DemoFrame; onConfirm?: () => void }) {
+  const requested = frame.live?.requestedSlot || REQUESTED_SLOT;
+  const offered = frame.live?.offeredSlot ?? ALTERNATE_SLOT;
+  const confirmed = frame.live?.confirmedSlot ?? offered;
   const copy =
     frame.slot === "rejected"
-      ? { label: "Unavailable", title: REQUESTED_SLOT, note: "Cool Air already has this window." }
+      ? { label: "Unavailable", title: requested, note: "Cool Air already has this window." }
       : frame.slot === "counteroffer"
-        ? { label: "Counteroffer", title: ALTERNATE_SLOT, note: "Offered instead of 5:30–7:00 PM." }
+        ? { label: "Counteroffer", title: offered, note: `Offered instead of ${requested}.` }
         : frame.slot === "confirmed"
-          ? { label: "Confirmed", title: ALTERNATE_SLOT, note: "Cool Air Mechanical." }
-          : { label: "Requested", title: REQUESTED_SLOT, note: "Asked first." };
+          ? { label: "Confirmed", title: confirmed, note: "Cool Air Mechanical." }
+          : { label: "Requested", title: requested, note: "Asked first." };
 
   return (
     <article
@@ -112,6 +134,15 @@ function Appointment({ frame }: { frame: DemoFrame }) {
       <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-muted">{copy.label}</p>
       <p className="nara-serif mt-1 text-[26px] leading-tight">{copy.title}</p>
       <p className="mt-1 text-[15px] text-ink/75">{copy.note}</p>
+      {frame.live?.canConfirm && onConfirm ? (
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="mt-4 h-12 w-full rounded-full bg-sage text-[17px] font-semibold text-cream"
+        >
+          Confirm {offered}
+        </button>
+      ) : null}
     </article>
   );
 }

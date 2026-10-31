@@ -1,7 +1,11 @@
 import { RescueDemo } from "@/components/RescueDemo";
-import { dataMode, inspectBackend } from "@/data/adapters";
+import { dataMode } from "@/data/adapters";
 
-export default function Home() {
-  const mode = dataMode();
-  return <RescueDemo mode={mode} backend={inspectBackend()} />;
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string }>;
+}) {
+  const { mode } = await searchParams;
+  return <RescueDemo mode={dataMode(mode)} />;
 }
