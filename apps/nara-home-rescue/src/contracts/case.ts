@@ -34,6 +34,37 @@ export type HistoryEntry = {
   emphasis?: "context" | "scheduled";
 };
 
+/** Completed history stays distinct from a scheduled visit on the current case. */
+export type ServiceRecordStatus = "completed" | "scheduled";
+
+/**
+ * Structured service record for one piece of equipment.
+ * Null means the home never stored that fact. Callers render "Not recorded".
+ */
+export type ServiceRecord = {
+  id: string;
+  homeId: string;
+  equipmentId: string;
+  /** Year, or "Today" when only a same-day window is known. */
+  year: string;
+  /** Calendar date or confirmed window. Null when only a year was stored. */
+  date: string | null;
+  category: string;
+  title: string;
+  outcome: string;
+  status: ServiceRecordStatus;
+  /** Set only when this row belongs to the current service case. */
+  caseId: string | null;
+  issue: string | null;
+  diagnosis: string | null;
+  workPerformed: string | null;
+  parts: string | null;
+  provider: string | null;
+  cost: string | null;
+  warranty: string | null;
+  attachments: string | null;
+};
+
 export type SlotState = "requested" | "rejected" | "counteroffer" | "confirmed";
 
 export const CASE_ID = "case-1847-maple";

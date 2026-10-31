@@ -1,169 +1,267 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import type { DataMode } from "@/data/adapters";
+import { useEffect, useRef, useState } from "react";
 import {
-  confirmCase,
-  createCase,
-  frameFromCase,
-  playDemo,
-  replayCase,
-  useDirector,
-  useLiveCase,
-  useRevealed,
-  useTypewriter,
-  visibleEventCount,
-} from "@/data/live";
-import { frameAt, STAGES, type DemoFrame } from "@/demo/script";
+  APPOINTMENT_SLOTS,
+  APPOINTMENT_TECHNICIANS,
+  capacityForSlot,
+  describeAppointment,
+  emptyAppointment,
+  reduceAppointment,
+  slotIdForTechnician,
+  type AppointmentCase,
+  type AppointmentView,
+} from "@/demo/appointment";
+import type { DataMode } from "@/data/adapters";
+import { LiveRescueDemo } from "./LiveRescueDemo";
+import type { TechId } from "@/demo/roster";
+import { clampStep, frameAt, STEPS, type InspectorSnapshot } from "@/demo/script";
+import { DispatchApp } from "@/capacity/dispatch/DispatchApp";
 import { ActivityPane } from "./ActivityPane";
 import { HomeownerPane } from "./HomeownerPane";
-import { ShopPane } from "./ShopPane";
 
-const STEP_MS = 2200;
-
+/**
+ * The presentation index only chooses a screen.
+ * The appointment case is the only source for technician, slot, and status.
+ * Next, Previous, and the arrow keys never confirm, reject, or reschedule.
+ * Reset clears this simulated case. It does not call a backend delete.
+ */
 export function RescueDemo({ mode }: { mode: DataMode }) {
-  return mode === "mock" ? <ScriptedDemo /> : <LiveDemo />;
-}
+  const [step, setStep] = useState(0);
+  const [techId, setTechId] = useState<TechId>("alex");
+  const [appointment, setAppointment] = useState<AppointmentCase>(emptyAppointment);
+  const seen = useRef(new Set<string>());
+  const frame = frameAt(step, appointment.confirmedTechnicianId ?? appointment.requestedTechnicianId ?? techId);
+  const view = describeAppointment(frame.stepId, appointment);
+  const last = STEPS.length - 1;
 
-function ScriptedDemo() {
-  const [index, setIndex] = useState(0);
-  const frame = frameAt(index);
+  function go(next: number) {
+    const target = clampStep(next);
+    if (target === step) return;
+    if (target > step) {
+      const key = `fixture-view:${STEPS[target].id}`;
+      seen.current.add(key);
+    }
+    setStep(target);
+  }
+
+  function requestTechnician(id: TechId) {
+    const slotId = slotIdForTechnician(id);
+    if (!slotId) return;
+    setTechId(id);
+    setAppointment((current) =>
+      reduceAppointment(current, {
+        type: "request",
+        technicianId: id,
+        slotId,
+      }),
+    );
+    go(5);
+  }
+
+  function confirmRequested() {
+    setAppointment((current) => reduceAppointment(current, { type: "confirm-requested" }));
+  }
+
+  function offerInstead(technicianId: string, reason: string) {
+    const slotId = slotIdForTechnician(technicianId);
+    if (!slotId || (technicianId !== "alex" && technicianId !== "maria")) return;
+    setAppointment((current) =>
+      reduceAppointment(current, {
+        type: "counteroffer",
+        technicianId,
+        slotId,
+        reason,
+      }),
+    );
+  }
+
+  function acceptCounteroffer() {
+    setAppointment((current) => reduceAppointment(current, { type: "accept-counteroffer" }));
+  }
+
+  function declineCounteroffer() {
+    setAppointment((current) => reduceAppointment(current, { type: "decline-counteroffer" }));
+  }
+
+  function reset() {
+    seen.current.clear();
+    setTechId("alex");
+    setAppointment(emptyAppointment());
+    setStep(0);
+  }
 
   useEffect(() => {
-    if (index >= STAGES.length - 1) return;
-    const timer = window.setTimeout(() => setIndex((value) => value + 1), STEP_MS);
-    return () => window.clearTimeout(timer);
-  }, [index]);
-
-  return (
-    <Shell
-      frame={frame}
-      eyebrow="simulated demo"
-      action={
-        <button type="button" onClick={() => setIndex(0)} className={BUTTON}>
-          Reset demo
-        </button>
+    function onKey(event: KeyboardEvent) {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        return;
       }
-    />
-  );
-}
-
-function LiveDemo() {
-  const { current, reachable } = useLiveCase();
-  const reopened = !!current && current.checkpoint !== "created" && current.checkpoint !== "diagnosed";
-  const { revealed, instant } = useRevealed(current?.id ?? "", visibleEventCount(current), reopened);
-  const paced = current ? replayCase(current, revealed) : null;
-  const raw = frameFromCase(paced, reachable);
-  const { shown, typing } = useTypewriter(raw.live?.assessment ?? "", raw.caseId, instant);
-  const frame: DemoFrame = raw.live
-    ? {
-        ...raw,
-        showAssessment: shown.length > 0,
-        live: { ...raw.live, assessment: shown || undefined, typing },
-      }
-    : raw;
-  const [busy, setBusy] = useState(false);
-  const director = useDirector();
-
-  async function report() {
-    setBusy(true);
-    try {
-      await createCase();
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setBusy(false);
+      if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+      event.preventDefault();
+      setStep((current) => {
+        const targetStep = clampStep(event.key === "ArrowRight" ? current + 1 : current - 1);
+        if (targetStep > current) {
+          seen.current.add(`fixture-view:${STEPS[targetStep].id}`);
+        }
+        return targetStep;
+      });
     }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  if (mode === "backend") {
+    return <LiveRescueDemo mode="backend" />;
   }
 
-  function confirm() {
-    if (current) confirmCase(current.id).catch((error) => console.error(error));
-  }
-
-  const eyebrow = [
-    frame.live?.workerPid ? `live · coordinator pid ${frame.live.workerPid}` : "live",
-    director?.running ? `director: ${director.step}` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-  return (
-    <Shell
-      frame={frame}
-      eyebrow={eyebrow}
-      action={
-        <>
-          {director ? (
-            <button
-              type="button"
-              onClick={() => playDemo().catch((error) => console.error(error))}
-              disabled={director.running}
-              className={BUTTON}
-            >
-              {director.running ? "Playing…" : "Play demo"}
-            </button>
-          ) : null}
-          <button type="button" onClick={report} disabled={busy} className={BUTTON_QUIET}>
-            New case
-          </button>
-        </>
-      }
-      onReport={report}
-      onConfirm={confirm}
-    />
-  );
-}
-
-const BUTTON =
-  "h-11 rounded-full bg-sage px-5 text-[15px] font-semibold text-cream disabled:opacity-60";
-const BUTTON_QUIET =
-  "h-11 rounded-full px-5 text-[15px] font-semibold text-ink ring-1 ring-line disabled:opacity-60";
-
-function Shell({
-  frame,
-  eyebrow,
-  action,
-  onReport,
-  onConfirm,
-}: {
-  frame: DemoFrame;
-  eyebrow: string;
-  action: ReactNode;
-  onReport?: () => void;
-  onConfirm?: () => void;
-}) {
   return (
     <main className="flex h-dvh flex-col bg-sand px-4 py-3 text-ink">
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <header className="mb-3 flex items-center justify-between gap-4">
         <div>
           <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
-            Nara Home Rescue · {eyebrow}
+            Nara Home Rescue
           </p>
-          <h1 className="nara-serif text-[28px] leading-tight">A home that remembers, reasons, and acts.</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <p className="text-[15px] font-medium text-sage-deep" aria-live="polite">
-            {frame.stageLabel}
-          </p>
-          {action}
+          <h1 className="nara-serif text-[26px] leading-tight">
+            A home that remembers, reasons, and acts.
+          </h1>
         </div>
       </header>
 
-      <ol className="mb-3 flex gap-1.5" aria-label="Demo progress">
-        {STAGES.map((stage, stageIndex) => (
-          <li
-            key={stage.id}
-            className={`h-1.5 flex-1 rounded-full ${stageIndex <= frame.index ? "bg-sage" : "bg-line"}`}
-            title={stage.label}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 min-[1180px]:grid-cols-[340px_minmax(0,1fr)_220px]">
+        <HomeownerPane
+          frame={frame}
+          view={view}
+          onReport={() => go(1)}
+          onRequest={requestTechnician}
+          onAccept={acceptCounteroffer}
+          onDecline={declineCounteroffer}
+          scheduled={scheduledVisit(appointment)}
+        />
+        <section aria-label="HVAC shop" className="min-h-0 overflow-hidden rounded-[28px] ring-1 ring-line/80">
+          <DispatchApp
+            requestVisible={frame.index >= 5 && appointment.requestedTechnicianId !== null}
+            confirmedTechId={
+              appointment.appointmentStatus === "confirmed" ? appointment.confirmedTechnicianId : null
+            }
+            slotOccupancy={{
+              "alex-today": capacityForSlot("alex-today", appointment).occupancy,
+              "maria-today": capacityForSlot("maria-today", appointment).occupancy,
+            }}
+            requestedTechnicianId={appointment.requestedTechnicianId}
+            appointmentStatus={appointment.appointmentStatus}
+            onConfirmRequested={confirmRequested}
+            onOfferInstead={offerInstead}
           />
-        ))}
-      </ol>
-
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 min-[1100px]:grid-cols-[340px_minmax(0,1fr)_280px]">
-        <HomeownerPane frame={frame} onReport={onReport} />
-        <ShopPane frame={frame} onConfirm={onConfirm} />
-        <ActivityPane frame={frame} />
+        </section>
+        <ActivityPane frame={{ ...frame, inspector: inspectorFor(frame.inspector, view, appointment) }} />
       </div>
+
+      <PresenterBar
+        step={step}
+        last={last}
+        label={frame.stepLabel}
+        onPrevious={() => go(step - 1)}
+        onNext={() => go(step + 1)}
+        onReset={reset}
+      />
     </main>
   );
 }
+
+function scheduledVisit(appointment: AppointmentCase) {
+  if (
+    appointment.appointmentStatus !== "confirmed" ||
+    !appointment.confirmedTechnicianId ||
+    !appointment.confirmedSlotId
+  ) {
+    return null;
+  }
+  const tech = APPOINTMENT_TECHNICIANS[appointment.confirmedTechnicianId];
+  const slot = APPOINTMENT_SLOTS[appointment.confirmedSlotId];
+  return { name: tech.name, company: tech.company, windowLabel: slot.label };
+}
+
+function inspectorFor(
+  inspector: InspectorSnapshot,
+  view: AppointmentView,
+  appointment: AppointmentCase,
+): InspectorSnapshot {
+  if (view.phase === "confirmed" || view.phase === "journey") {
+    return {
+      ...inspector,
+      relay: `Simulated confirmation for ${view.windowLabel}. Not received from Agent Relay.`,
+      statusLabel: "confirmed",
+      checkpoint: "booked",
+    };
+  }
+  if (view.phase === "counteroffer") {
+    return {
+      ...inspector,
+      relay: `Simulated counteroffer for ${view.windowLabel}. Not confirmed. Not received from Agent Relay.`,
+      statusLabel: "counteroffer_pending_homeowner",
+      checkpoint: "counteroffer",
+    };
+  }
+  if (view.phase === "waiting") {
+    return {
+      ...inspector,
+      relay: "No provider decision yet. The requested slot was not rejected.",
+      statusLabel: appointment.appointmentStatus,
+      checkpoint: "awaiting_provider",
+    };
+  }
+  return inspector;
+}
+
+function PresenterBar({
+  step,
+  last,
+  label,
+  onPrevious,
+  onNext,
+  onReset,
+}: {
+  step: number;
+  last: number;
+  label: string;
+  onPrevious: () => void;
+  onNext: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+      <button
+        type="button"
+        onClick={onPrevious}
+        disabled={step === 0}
+        className="h-10 rounded-full bg-paper px-4 text-[14px] font-semibold text-ink ring-1 ring-line disabled:opacity-40"
+      >
+        Previous
+      </button>
+      <p className="min-w-[16rem] text-center text-[15px] font-medium" aria-live="polite">
+        Step {step + 1} of {last + 1} — {label}
+      </p>
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={step === last}
+        className="h-10 rounded-full bg-sage px-4 text-[14px] font-semibold text-cream disabled:opacity-40"
+      >
+        Next
+      </button>
+      <button
+        type="button"
+        onClick={onReset}
+        className="h-10 rounded-full px-3 text-[14px] font-semibold text-muted underline decoration-line underline-offset-4"
+      >
+        Reset demo
+      </button>
+    </div>
+  );
+}
+
