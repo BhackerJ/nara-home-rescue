@@ -411,15 +411,17 @@ function summarize(kind: string, body: string): string {
   }
   const slot = String(data.slot ?? data.requestedSlot ?? "");
   const alts = Array.isArray(data.alternatives) ? (data.alternatives as string[]).join(" or ") : "";
+  const tech = (data.technician as { name?: string } | undefined)?.name;
+  const reason = typeof data.reason === "string" && data.reason ? ` — ${data.reason}` : "";
   switch (kind) {
     case "slot_request":
-      return `Requested ${slot || "a slot"} for the repair.`;
+      return `Requested ${slot || "a slot"} and sent the job packet.`;
     case "reject":
-      return `${slot || "That slot"} is taken. Offered ${alts || "other times"}.`;
+      return `${slot || "That slot"} is taken. Offered ${alts || "other times"}${tech ? ` with ${tech}` : ""}.${reason}`;
     case "accept":
-      return `Accepted ${slot}.`;
+      return `Accepted ${slot}.${reason}`;
     case "confirm":
-      return `Confirmed ${slot}. Technician booked.`;
+      return `Confirmed ${slot}${tech ? ` with ${tech}` : ""}.`;
     default:
       return typeof data.text === "string" ? data.text : body;
   }

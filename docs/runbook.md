@@ -38,7 +38,7 @@ Then open `http://localhost:3100/home` (homeowner) and `http://localhost:3100/di
 4. `/dispatch`: click **Confirm**. Terminal 4 logs `booked Tue 13:00 (new) -> confirm sent`. Nothing happens on `/home`: the coordinator is dead.
 5. Terminal 5: `node scripts/coordinator.mjs`. Within a second `/home` shows the recovery card (`pid old → pid new · resumed from slot_accepted`), the confirm message tagged **caught up from Relay after restart**, the confirmed appointment, and the Home Twin gains a history line.
 
-Machine time: ~4 s to `slot_accepted`, then as long as you talk, then ~1 s after the restart.
+Machine time: ~6 s to `slot_accepted` (diagnosis ~2 s, the shop's technician match ~1 s, the slot choice ~1 s, each an OpenAI call), then as long as you talk, then ~1 s after the restart. The three LLM decisions are: the diagnosis (streams), the shop's technician pick with a reason, the dispatcher's slot pick with a reason.
 
 ## If it breaks
 
