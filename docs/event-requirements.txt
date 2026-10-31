@@ -1,0 +1,99 @@
+Come join us for Haunted Hacks to kick off Halloween this year. Hosted by Terse (https://www.useterse.ai/) (F26) and AgentRelay (https://agentrelay.com/) (F26), brought to you by OpenAI, Mastra (W25), Supabase (S20) and Freestyle (F24).
+
+Every participant will receive:
+
+  - $100 in OpenAI API credits per participant.
+  - $25 in Supabase credits per each attendee (equivalent to 1 free month of Pro plan)
+
+Love Durable Objects? Come build with our Open Source alternative!
+
+Tired of copy/pasting messages between your agents? Come see how much you can build when you let agents collaborate directly with Agent Relay!
+
+Want to do both at the same time? Even better!
+
+Lunch, snacks, candy, bad Halloween/AI puns, swag, coffee, and prizes are all included.
+
+Tracks include:
+
+  - Hackathon winner: A guaranteed YC interview
+  - Stateful Apps: Build with durable-actors (https://github.com/TerseAI/durable-actors) from Terse - iPhone Duo
+  - Agent to agent communication built with Agent Relay: Mac Mini
+  - Costume contest: Bragging rights
+
+October 31, 2026 · San Francisco, CA
+
+Eligibility
+
+We recommend working in groups, and we're happy to help you form a team if you're coming on your own.
+
+This is an in-person event in San Francisco. You must be able to attend on-site to participate.
+
+Attendees must be 16 or older.
+
+Schedule
+
+  - 10:00am - 11:00am: Doors Open + Registration
+  - 11:00am: Hacking begins
+  - 1:00pm: Lunch
+  - 4:00pm: Submission deadline
+  - 4:00pm - 5:00pm: Judging
+  - 5:00pm - 6:00pm: Award Ceremony
+
+What to build
+
+The Actor world is hot right now. Come build your own Software Factory, long-running agent, multiplayer AI system or something super creative you've been itching to try out.
+
+Projects should ideally use either Durable actors, or Agent Relay (bonus points if you use both at the same time).
+
+Rules
+
+All code must be created at the hackathon.
+
+Thinking of ideas before the hackathon is fine.
+
+Judging
+
+We will be using devpost! We recommend setting up your account ahead of time.
+
+The top entries will demo live at the end of the event, and judges will select winners from those demos.
+
+Judges are looking for either very well-executed products or incredibly creative use cases using Durable Actors and Agent Relay. Again, bonus points if you can do both!
+
+Judges will be announced soon.
+
+Prizes
+
+The best overall project will receive a guaranteed YC Interview, $5k in OpenAI API credits and 3 months free of Mastra Platform.
+
+The second place team will receive $2.5k in OpenAI API Credits and 2 months free of Mastra Platform.
+
+The third place team will receive $1k in OpenAI API Credits and 1 month free of Mastra Platform.
+
+The best project using Durable Actors will get an iPhone duo. 
+
+The best project built using Agent Relay will get a Mac mini.
+
+The project deemed the “most likely to scale to millions” will receive $1K in credits from Supabase 
+
+More prizes will be announced!
+
+Don’t Know What Actors/Durable Objects Are?
+
+Here are some great resources:
+- https://boristane.com/blog/what-are-cloudflare-durable-objects/ (https://boristane.com/blog/what-are-cloudflare-durable-objects/)
+
+- https://x.com/aboodman/status/2088155104851657110 (https://x.com/aboodman/status/2088155104851657110)
+
+Instructions:
+All guests must have a confirmed event RSVP, enter through the front doors on 20th Street, and check-in with your QR code.
+
+Transportation options to reach YC include:
+
+  - Caltrain & Muni: The closest Caltrain Station is 22nd Street with an 11-minute walk to YC. The T Line Muni is also nearby on Third Street. The MTA trip planner is here: https://www.sfmta.com/trip-planner
+  - Biking: There is a bike rack behind 580 20th Street in the parking lot. Please bring your own bike lock.
+
+Driving/Parking:
+
+  - Metered street parking is available on 20th Street and Illinois Street.
+  - The Crane Cove Lot #149 is located at the back of 580 20th Street and can be accessed at 19th and Illinois Streets.
+  - Rideshare: All rideshare services will easily pick up and drop off at the YC office. If you cannot utilize public transit and believe parking will be full/expensive/inconvenient, we strongly encourage you to utilize a ride share service.

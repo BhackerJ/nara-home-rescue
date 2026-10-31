@@ -1,0 +1,244 @@
+Part 2 — Product Requirements Document
+Version 1.0 · October 25, 2026 · Target demo: October 31, 2026
+1. Product overview
+Product name: Nara Home Rescue
+
+Product type: Persistent multi-agent home-service orchestration prototype.
+
+Primary user: Homeowner experiencing an urgent HVAC issue.
+
+Secondary user: Simulated HVAC service provider.
+
+Core hypothesis: A persistent home-service actor coordinating specialized AI agents can maintain context and complete a multi-step service workflow despite interruptions and changing availability.
+
+Hackathon objective: Deliver a technically credible, visually clear, end-to-end demonstration of state persistence, agent collaboration and service resolution.
+
+Business objective: Explore reusable architecture for Nara's Home Twin and future service coordination layer.
+2. Scope and priorities
+Feature	Priority	Acceptance criteria
+Home profile	P0	Displays stored HVAC equipment and history
+Service case	P0	Creates a unique case with durable state
+Diagnostic agent	P0	Produces a structured issue summary
+Dispatch agent	P0	Sends a service request to a provider
+Provider agent	P0	Rejects one slot and offers another
+Agent activity stream	P0	Displays actual agent messages
+Recovery demo	P0	Interrupted execution resumes without losing context
+Appointment confirmation	P0	Simulated booking is saved and displayed
+Home Twin update	P0	Case outcome persists in home history
+Photo analysis	P1	Optional image input enriches equipment context
+Voice input	P2	Optional spoken request
+Real HVAC integration	Out of scope	Not required
+Payments	Out of scope	Not required
+Real contractor booking	Out of scope	Not required
+
+P0 means necessary for the winning demo; P1 is optional if the core works early; P2 is a stretch.
+3. User experience
+PRIMARY FLOW
+Home Dashboard
+
+HVAC profile + existing home history
+
+
+Report Problem
+
+“My AC isn't cooling.”
+
+
+Persistent Case Created
+
+Home context + symptoms + case status
+
+
+Diagnostic Agent
+
+Issue summary
+
+
+Dispatch Agent
+
+Provider coordination
+
+
+
+
+Worker Interrupted → Recover
+
+Resume from persisted checkpoint
+
+
+Provider Rejects → Agents Renegotiate
+
+Alternative availability returned
+
+
+Simulated Appointment Confirmed
+
+Home Twin history updated
+
+
+4. Screen requirements
+Screen 01
+
+Home Dashboard
+
+Show the home identity, one HVAC equipment card, maintenance history, and a prominent “Report a Problem” action.
+
+
+
+Screen 02
+
+Service Case Workspace
+
+Main hero screen: homeowner request on the left, live agent activity on the right, current case state visible at all times. Make messages, timestamps and agent identity inspectable.
+
+
+
+Screen 03
+
+Recovery Monitor
+
+Display the active worker, last persisted checkpoint, interruption event and successful resumption. The recovery indicator must reflect actual backend events.
+
+
+
+Screen 04
+
+Service Confirmation
+
+Display the simulated provider, appointment time, service summary, and updated home history.
+
+
+
+5. Technical architecture
+Proposed architecture, subject to SDK feasibility validation.
+React / Next.js Frontend
+
+Home dashboard · Case workspace · Live activity
+
+
+Durable Service Case Actor
+
+Case state · Checkpoints · Workflow status · Idempotency
+
+
+Diagnostic
+
+Agent
+
+
+Dispatch
+
+Agent
+
+
+Provider
+
+Agent
+
+
+
+Agent Relay
+
+Real inter-agent messaging where SDK supports it
+
+
+Mock Provider Scheduling API
+
+Availability · Reject · Counteroffer · Confirm
+
+
+Important: the architecture must distinguish a durable case record from an actively executing agent process. Persisting a case doesn't automatically guarantee that in-flight execution can resume. We need explicit checkpoints and a recovery mechanism.
+6. Core data contracts
+
+type CaseStatus =
+  | "created"
+  | "diagnosing"
+  | "dispatching"
+  | "awaiting_provider"
+  | "recovering"
+  | "negotiating"
+  | "confirmed"
+  | "failed";
+
+interface ServiceCase {
+  id: string;
+  homeId: string;
+  equipmentId: string;
+  issue: string;
+  symptoms: string[];
+  status: CaseStatus;
+  checkpoint: string;
+  revision: number;
+  requestedSlot?: string;
+  confirmedSlot?: string;
+  providerId?: string;
+  events: CaseEvent[];
+}
+
+interface CaseEvent {
+  id: string;
+  caseId: string;
+  timestamp: string;
+  agent: string;
+  type: string;
+  payload: Record<string, unknown>;
+}
+
+
+
+Every meaningful transition should be persisted before advancing the workflow. On recovery, the actor should identify the last completed step and safely resume unfinished work. Use idempotency keys for provider requests to prevent duplicate bookings after retries.
+7. Functional acceptance tests
+Hackathon readiness checklist
+
+0/10 passed
+
+
+
+[ ] Create a case
+
+A unique service case is persisted and reloadable
+
+
+[ ] Use home context
+
+Diagnosis references the correct stored equipment profile
+
+
+[ ] Exchange agent messages
+
+Actual sender, receiver and message payload are logged
+
+
+[ ] Reject a slot
+
+Provider returns an unavailable response and an alternative
+
+
+[ ] Interrupt a worker
+
+The worker actually stops during an unfinished workflow
+
+
+[ ] Recover execution
+
+The case resumes from its checkpoint without restarting intake
+
+
+[ ] Prevent duplicates
+
+Retry does not create a second confirmed booking
+
+
+[ ] Confirm appointment
+
+Provider's accepted slot appears in the case
+
+
+[ ] Update Home Twin
+
+Service history is saved and survives reload
+
+
+[ ] Complete submission
+
+Devpost entry, demo evidence and repository are ready
