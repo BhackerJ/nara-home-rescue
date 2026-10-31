@@ -4,6 +4,9 @@ const appRoot = process.cwd();
 
 const nextConfig: NextConfig = {
   agentRules: false,
+  // The dev server serves /_next/* only to allowed origins. Nagisa opens the demo through a
+  // Cloudflare quick tunnel or over the LAN, so allow those (docs/runbook.md).
+  allowedDevOrigins: ["*.trycloudflare.com", "172.17.21.4", "192.168.*.*", "10.*.*.*"],
   // Hide the dev-tools badge: it shows on the projector and in the backup video.
   devIndicators: false,
   outputFileTracingRoot: appRoot,
