@@ -46,10 +46,12 @@ Instead of terminals 4 and 5, run the director once from the repo root and leave
 
 ```
 node scripts/demo-director.mjs            # :7300; starts provider + coordinator and restarts them if they die
-node scripts/demo-director.mjs --hold 12  # hold 12 s at the CONFIRM moment before the kill (default 8)
+node scripts/demo-director.mjs --hold 30  # seconds between slot_accepted and the kill (default 20)
 ```
 
-`http://localhost:3000` then shows a **Play demo** button. One click: reset → file the case → diagnosis and Relay negotiation → hold at the shop's CONFIRM → `kill -9` the coordinator → the shop confirms while it is dead (4 s) → restart (4 s later) → recovery card, caught-up confirm, confirmed slot, Home Twin line. About 25 s; the header shows the director's current step. The final step line reports one booking, the caught-up confirm and the old → new pid; a failed check shows `failed: …` there.
+`http://localhost:3000` then shows a **Play demo** button. One click: reset → file the case → diagnosis and Relay negotiation → hold at the shop's CONFIRM → `kill -9` the coordinator → the shop confirms while it is dead (5 s) → restart (5 s later) → recovery card, caught-up confirm, confirmed slot, Home Twin line. About 60 s; the header shows the director's current step. The final step line reports one booking, the caught-up confirm and the old → new pid; a failed check shows `failed: …` there.
+
+The page paces the display (design §7: the backend adds no delay): it replays the case's event log one event every 4 s, so the Relay burst reads as a sequence — request, declined with the technician, accepted with the reason, each with its own card. The 20 s hold is ~12 s of that catch-up plus ~8 s of looking at the Confirm button. The run on screen, in order: assessment types out (~4 s) → "Slot requested" → "Requested slot declined" + Assigned technician card → "Alternative accepted" + Confirm button → kill → "Coordinator came back" card → "Appointment confirmed · caught up from Relay after restart" → Confirmed card → Home Twin line.
 
 **New case** still works by hand while the director is up (then you kill and restart in the director's terminal: `kill -9 <coordinator pid>`; the director restarts it after 1 s).
 

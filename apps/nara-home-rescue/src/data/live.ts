@@ -104,6 +104,107 @@ export function useTypewriter(
   return { shown: target.slice(0, shownCount), typing: shownCount < target.length };
 }
 
+/** Event types the activity pane renders; the replay reveals these one at a time. */
+const VISIBLE_EVENTS = new Set(["diagnosed", "agent_message", "recovery_started", "booking", "home_updated", "error"]);
+
+const STATUS_BY_CHECKPOINT: Record<string, CaseStatus> = {
+  created: "diagnosing",
+  diagnosed: "dispatching",
+  slot_requested: "awaiting_provider",
+  slot_rejected: "negotiating",
+  slot_accepted: "awaiting_provider",
+  booked: "negotiating",
+  home_updated: "confirmed",
+};
+
+export function visibleEventCount(c: ServiceCase | null): number {
+  return c ? c.events.filter((e) => VISIBLE_EVENTS.has(e.type)).length : 0;
+}
+
+/**
+ * Display pacing for the whole screen (design-hackathon §7): reveals the case's
+ * events one at a time so a burst of Relay messages reads as a sequence. The
+ * first event shows at once; a case that is already past diagnosis when first
+ * seen (reopened page) shows everything at once.
+ */
+export function useRevealed(
+  caseId: string,
+  total: number,
+  reopened: boolean,
+  intervalMs = 4000,
+): { revealed: number; instant: boolean } {
+  const [progress, setProgress] = useState({ caseId: "", count: 0, instant: false });
+  const known = progress.caseId === caseId;
+  const revealed = known ? Math.min(progress.count, total) : 0;
+
+  useEffect(() => {
+    if (!known) {
+      // First sight of this case decides, once, whether it shows all at once. Deciding on
+      // every render is wrong: a live case can jump two checkpoints between two polls.
+      const timer = setTimeout(
+        () => setProgress({ caseId, count: reopened ? total : 0, instant: reopened }),
+        0,
+      );
+      return () => clearTimeout(timer);
+    }
+    if (revealed >= total) return;
+    const timer = setTimeout(
+      () => setProgress((p) => ({ ...p, count: revealed + 1 })),
+      revealed === 0 ? 0 : intervalMs,
+    );
+    return () => clearTimeout(timer);
+  }, [caseId, known, revealed, total, reopened, intervalMs]);
+
+  return { revealed, instant: known && progress.instant };
+}
+
+/**
+ * The case as it looked when its first `revealed` visible events had happened:
+ * the event log replayed up to that point. Everything the panes show
+ * (checkpoint, status, offer, booking, recovery, narrative) is re-derived from
+ * that prefix, so the whole screen moves together.
+ */
+export function replayCase(c: ServiceCase, revealed: number): ServiceCase {
+  if (revealed >= visibleEventCount(c)) return c;
+  let seen = 0;
+  let cut = 0;
+  for (let i = 0; i < c.events.length && seen < revealed; i++) {
+    if (VISIBLE_EVENTS.has(c.events[i].type)) seen++;
+    cut = i + 1;
+  }
+  // Keep the bookkeeping events (step_completed) that follow the last revealed one:
+  // they carry the checkpoint that the revealed message produced.
+  while (cut < c.events.length && !VISIBLE_EVENTS.has(c.events[cut].type)) cut++;
+  const events = c.events.slice(0, cut);
+  const last = (type: string) => [...events].reverse().find((e) => e.type === type)?.payload;
+  const checkpoint = String(last("step_completed")?.step ?? "created");
+  const recovery = last("recovery_started");
+  const booking = last("booking");
+  const reject = parseBody(events.find((e) => e.type === "agent_message" && e.payload.kind === "reject")?.payload.body);
+  const narrative = String(last("diagnosed")?.narrative ?? "");
+  const status: CaseStatus =
+    recovery && !booking ? "recovering" : (STATUS_BY_CHECKPOINT[checkpoint] ?? c.status);
+
+  return {
+    ...c,
+    status,
+    checkpoint,
+    events,
+    confirmedSlot: booking ? String(booking.slot) : undefined,
+    diagnostic: { narrative },
+    draftDiagnosis: checkpoint === "created" ? c.draftDiagnosis : undefined,
+    counteroffer: Array.isArray(reject.alternatives) ? { alternatives: reject.alternatives as string[] } : null,
+    recovery: recovery
+      ? {
+          previousPid: Number(recovery.previousPid),
+          pid: Number(recovery.pid),
+          fromCheckpoint: String(recovery.fromCheckpoint),
+          at: String(recovery.at ?? ""),
+        }
+      : undefined,
+  };
+}
+
 export type Director = {
   running: boolean;
   step: string;
@@ -227,7 +328,12 @@ export function frameFromCase(c: ServiceCase | null, reachable: boolean): DemoFr
   return {
     index,
     stage,
-    stageLabel: c.status === "failed" ? "Case failed" : STAGES[index].label,
+    stageLabel:
+      c.status === "failed"
+        ? "Case failed"
+        : stage === "recovery"
+          ? "Coordinator came back"
+          : STAGES[index].label,
     caseId: c.id,
     caseOpen: true,
     status: c.status,

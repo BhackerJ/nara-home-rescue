@@ -2,7 +2,9 @@
 // request, so the :3000 page can run the demo with one button and no terminal work.
 //
 //   node scripts/demo-director.mjs             listens on :7300 (design §3 reserved this port for the supervisor)
-//   node scripts/demo-director.mjs --hold 12   seconds to hold at the CONFIRM moment before the kill (default 8)
+//   node scripts/demo-director.mjs --hold 30   seconds between slot_accepted and the kill (default 20: the page
+//                                              reveals one event every 4 s, so ~12 s of that is the audience
+//                                              catching up and ~8 s is looking at the CONFIRM button)
 //
 // GET  /status  -> { running, step, hold, runners: { provider, coordinator } }
 // POST /play    -> starts a run (409 if one is already playing)
@@ -18,7 +20,8 @@ const API = "http://localhost:3100";
 const PORT = 7300;
 const args = process.argv.slice(2);
 const holdArg = args.indexOf("--hold");
-const HOLD_MS = 1000 * (holdArg >= 0 ? Number(args[holdArg + 1]) || 8 : 8);
+const HOLD_MS = 1000 * (holdArg >= 0 ? Number(args[holdArg + 1]) || 20 : 20);
+const REVEAL_MS = 4000; // matches useRevealed in apps/nara-home-rescue/src/data/live.ts
 
 const log = (msg) => console.log(`${new Date().toISOString().slice(11, 23)} [director] ${msg}`);
 
@@ -98,11 +101,11 @@ async function play() {
     expectedDeath = "coordinator";
     dead.kill("SIGKILL");
     setStep(`coordinator killed (pid ${dead.pid})`);
-    await sleep(4000);
+    await sleep(5000);
 
     await api("/api/provider/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ caseId }) });
     setStep("shop confirmed while the coordinator is dead");
-    await sleep(4000);
+    await sleep(5000);
 
     expectedDeath = null;
     const revived = start("coordinator");
@@ -112,6 +115,8 @@ async function play() {
     const bookings = done.events.filter((e) => e.type === "booking").length;
     const caughtUp = done.events.some((e) => e.type === "agent_message" && e.payload.kind === "confirm" && e.payload.backfilled);
     if (bookings !== 1 || !caughtUp) throw new Error(`check failed: bookings ${bookings}, confirm caught up ${caughtUp}`);
+    setStep("recovered; the page is still revealing the last events");
+    await sleep(4 * REVEAL_MS);
     setStep(`done: confirmed ${done.confirmedSlot}, one booking, confirm caught up from Relay, pid ${done.recovery?.previousPid} -> ${done.recovery?.pid}`);
   } catch (error) {
     state.error = error.message;

@@ -7,9 +7,12 @@ import {
   createCase,
   frameFromCase,
   playDemo,
+  replayCase,
   useDirector,
   useLiveCase,
+  useRevealed,
   useTypewriter,
+  visibleEventCount,
 } from "@/data/live";
 import { frameAt, STAGES, type DemoFrame } from "@/demo/script";
 import { ActivityPane } from "./ActivityPane";
@@ -47,12 +50,11 @@ function ScriptedDemo() {
 
 function LiveDemo() {
   const { current, reachable } = useLiveCase();
-  const raw = frameFromCase(current, reachable);
-  const { shown, typing } = useTypewriter(
-    raw.live?.assessment ?? "",
-    raw.caseId,
-    raw.checkpoint !== "created" && raw.checkpoint !== "diagnosed",
-  );
+  const reopened = !!current && current.checkpoint !== "created" && current.checkpoint !== "diagnosed";
+  const { revealed, instant } = useRevealed(current?.id ?? "", visibleEventCount(current), reopened);
+  const paced = current ? replayCase(current, revealed) : null;
+  const raw = frameFromCase(paced, reachable);
+  const { shown, typing } = useTypewriter(raw.live?.assessment ?? "", raw.caseId, instant);
   const frame: DemoFrame = raw.live
     ? {
         ...raw,
