@@ -2,7 +2,15 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { DataMode } from "@/data/adapters";
-import { confirmCase, createCase, frameFromCase, useLiveCase, useTypewriter } from "@/data/live";
+import {
+  confirmCase,
+  createCase,
+  frameFromCase,
+  playDemo,
+  useDirector,
+  useLiveCase,
+  useTypewriter,
+} from "@/data/live";
 import { frameAt, STAGES, type DemoFrame } from "@/demo/script";
 import { ActivityPane } from "./ActivityPane";
 import { HomeownerPane } from "./HomeownerPane";
@@ -53,6 +61,7 @@ function LiveDemo() {
       }
     : raw;
   const [busy, setBusy] = useState(false);
+  const director = useDirector();
 
   async function report() {
     setBusy(true);
@@ -69,16 +78,33 @@ function LiveDemo() {
     if (current) confirmCase(current.id).catch((error) => console.error(error));
   }
 
+  const eyebrow = [
+    frame.live?.workerPid ? `live · coordinator pid ${frame.live.workerPid}` : "live",
+    director?.running ? `director: ${director.step}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <Shell
       frame={frame}
-      eyebrow={
-        frame.live?.workerPid ? `live · coordinator pid ${frame.live.workerPid}` : "live"
-      }
+      eyebrow={eyebrow}
       action={
-        <button type="button" onClick={report} disabled={busy} className={BUTTON}>
-          New case
-        </button>
+        <>
+          {director ? (
+            <button
+              type="button"
+              onClick={() => playDemo().catch((error) => console.error(error))}
+              disabled={director.running}
+              className={BUTTON}
+            >
+              {director.running ? "Playing…" : "Play demo"}
+            </button>
+          ) : null}
+          <button type="button" onClick={report} disabled={busy} className={BUTTON_QUIET}>
+            New case
+          </button>
+        </>
       }
       onReport={report}
       onConfirm={confirm}
@@ -88,6 +114,8 @@ function LiveDemo() {
 
 const BUTTON =
   "h-11 rounded-full bg-sage px-5 text-[15px] font-semibold text-cream disabled:opacity-60";
+const BUTTON_QUIET =
+  "h-11 rounded-full px-5 text-[15px] font-semibold text-ink ring-1 ring-line disabled:opacity-60";
 
 function Shell({
   frame,

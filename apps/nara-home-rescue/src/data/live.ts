@@ -104,6 +104,49 @@ export function useTypewriter(
   return { shown: target.slice(0, shownCount), typing: shownCount < target.length };
 }
 
+export type Director = {
+  running: boolean;
+  step: string;
+  error: string | null;
+  runners: { provider: number | null; coordinator: number | null };
+};
+
+/** Polls scripts/demo-director.mjs (proxied at /demo). Null when it is not running. */
+export function useDirector(pollMs = 1000): Director | null {
+  const [director, setDirector] = useState<Director | null>(null);
+
+  useEffect(() => {
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function poll() {
+      try {
+        const res = await fetch("/demo/status", { cache: "no-store" });
+        if (!res.ok) throw new Error(String(res.status));
+        const next = (await res.json()) as Director;
+        if (!stopped) setDirector(next);
+      } catch {
+        if (!stopped) setDirector(null);
+      }
+      if (!stopped) timer = setTimeout(poll, pollMs);
+    }
+
+    poll();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [pollMs]);
+
+  return director;
+}
+
+/** "Play demo": the director resets, files the case, kills and revives the coordinator. */
+export async function playDemo(): Promise<void> {
+  const res = await fetch("/demo/play", { method: "POST" });
+  if (!res.ok && res.status !== 409) throw new Error(`POST /demo/play → ${res.status}`);
+}
+
 /** Homeowner "Report a problem": the backend fills in the demo issue and symptoms. */
 export async function createCase(): Promise<string> {
   const res = await fetch("/api/cases", {

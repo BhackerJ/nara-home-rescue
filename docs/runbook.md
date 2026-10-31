@@ -40,17 +40,20 @@ Then open `http://localhost:3100/home` (homeowner) and `http://localhost:3100/di
 
 Machine time: ~6 s to `slot_accepted` (diagnosis ~2 s, the shop's technician match ~1 s, the slot choice ~1 s, each an OpenAI call), then as long as you talk, then ~1 s after the restart. The three LLM decisions are: the diagnosis (streams), the shop's technician pick with a reason, the dispatcher's slot pick with a reason.
 
-## Automatic run (backup video, pre-show check)
+## Play it from the page (no terminal work during the demo)
 
-With terminals 1–3 up and terminals 4–5 **closed**, open `http://localhost:3000` and run from the repo root:
+Instead of terminals 4 and 5, run the director once from the repo root and leave it:
 
 ```
-node scripts/auto-demo.mjs            # runs the whole story; provider + coordinator stay up afterwards (Ctrl-C stops them)
-node scripts/auto-demo.mjs --once     # same, then stops everything
-node scripts/auto-demo.mjs --pause 5  # hold 5 s at the CONFIRM moment before the kill (default 3)
+node scripts/demo-director.mjs            # :7300; starts provider + coordinator and restarts them if they die
+node scripts/demo-director.mjs --hold 12  # hold 12 s at the CONFIRM moment before the kill (default 8)
 ```
 
-It resets, starts both agents, files the case, waits for `slot_accepted`, pauses, `kill -9`s the coordinator, sends the shop's CONFIRM, restarts the coordinator and waits for `confirmed`. The last line reports the booking count, whether the confirm was caught up from Relay, and the old → new pid; about 15 s end to end. It exits non-zero if anything is off. Never run it while terminals 4–5 are open: two providers would answer the same request.
+`http://localhost:3000` then shows a **Play demo** button. One click: reset → file the case → diagnosis and Relay negotiation → hold at the shop's CONFIRM → `kill -9` the coordinator → the shop confirms while it is dead (4 s) → restart (4 s later) → recovery card, caught-up confirm, confirmed slot, Home Twin line. About 25 s; the header shows the director's current step. The final step line reports one booking, the caught-up confirm and the old → new pid; a failed check shows `failed: …` there.
+
+**New case** still works by hand while the director is up (then you kill and restart in the director's terminal: `kill -9 <coordinator pid>`; the director restarts it after 1 s).
+
+`node scripts/auto-demo.mjs --once` is the same story driven from a terminal, for a check without a browser. Never run it, or terminals 4–5, while the director is up: two providers would answer the same request.
 
 ## If it breaks
 
