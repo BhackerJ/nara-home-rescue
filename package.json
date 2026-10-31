@@ -1,0 +1,25 @@
+{
+  "name": "nara-home-rescue",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@agent-relay/sdk": "14.0.0",
+    "@relaycast/engine": "11.0.0",
+    "durable-actors": "0.12.2",
+    "pg": "8.23.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true,
+    "esbuild@0.28.2": true
+  },
+  "scripts": {
+    "actors": "cd actors && durable-actors dev --no-watch",
+    "actors:generate": "durable-actors generate --out-dir generated/actors",
+    "relay": "RELAYCAST_DB_PATH=relay/relaycast.db relaycast-engine",
+    "smoke:actors": "node scripts/smoke-actors.mjs",
+    "smoke:relay": "node scripts/smoke-relay.mjs"
+  }
+}
