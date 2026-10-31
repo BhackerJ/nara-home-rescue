@@ -14,7 +14,7 @@ Open http://localhost:3000
 
 ## Data mode
 
-`backend` (default) renders the live case from the ServiceCase actor. `src/data/live.ts` polls `/api/cases`. The API routes stay in `apps/dispatch-frontend`; this app proxies `/api/*` to `http://localhost:3100` and `/demo/*` to the demo director on `:7300` (`next.config.ts`). Actors, Agent Relay, and those routes are unchanged.
+The default screen is the presenter UI below, with the live agent log and the LLM text from the real case beside it (**Play demo** in the header runs the backend through the director; Next/Previous turn the screens). `?mode=live` opens the plain three-pane live view. `backend` renders the live case from the ServiceCase actor. `src/data/live.ts` polls `/api/cases`. The API routes stay in `apps/dispatch-frontend`; this app proxies `/api/*` to `http://localhost:3100` and `/demo/*` to the demo director on `:7300` (`next.config.ts`). Actors, Agent Relay, and those routes are unchanged.
 
 Live mode needs the backend from `docs/runbook.md`: actors (:7100), relay (:8787), `apps/dispatch-frontend` on :3100, `scripts/provider.mjs`, `scripts/coordinator.mjs`. Run `node scripts/reset-demo.mjs` before each run.
 

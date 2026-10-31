@@ -13,7 +13,18 @@ import {
   type AppointmentView,
 } from "@/demo/appointment";
 import type { DataMode } from "@/data/adapters";
+import {
+  frameFromCase,
+  playDemo,
+  replayCase,
+  useDirector,
+  useLiveCase,
+  useRevealed,
+  useTypewriter,
+  visibleEventCount,
+} from "@/data/live";
 import { LiveRescueDemo } from "./LiveRescueDemo";
+import { ActivityPane as LiveActivityPane } from "./live/ActivityPane";
 import type { TechId } from "@/demo/roster";
 import { clampStep, frameAt, STEPS, type InspectorSnapshot } from "@/demo/script";
 import { DispatchApp } from "@/capacity/dispatch/DispatchApp";
@@ -34,6 +45,18 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
   const frame = frameAt(step, appointment.confirmedTechnicianId ?? appointment.requestedTechnicianId ?? techId);
   const view = describeAppointment(frame.stepId, appointment);
   const last = STEPS.length - 1;
+
+  // The live case runs beside the presenter: Play demo drives the backend (director on :7300);
+  // the screens are still turned by hand. The agent log and the LLM text come from the case.
+  const { current, reachable } = useLiveCase();
+  const reopened = !!current && current.checkpoint !== "created" && current.checkpoint !== "diagnosed";
+  const { revealed, instant } = useRevealed(current?.id ?? "", visibleEventCount(current), reopened);
+  const rawLive = frameFromCase(current ? replayCase(current, revealed) : null, reachable);
+  const { shown, typing } = useTypewriter(rawLive.live?.assessment ?? "", rawLive.caseId, instant);
+  const liveFrame = rawLive.live
+    ? { ...rawLive, live: { ...rawLive.live, assessment: shown || undefined, typing } }
+    : rawLive;
+  const director = useDirector();
 
   function go(next: number) {
     const target = clampStep(next);
@@ -125,17 +148,30 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
         <div>
           <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
             Nara Home Rescue
+            {liveFrame.live?.workerPid ? ` · live · coordinator pid ${liveFrame.live.workerPid}` : ""}
+            {director?.running ? ` · ${director.step}` : ""}
           </p>
           <h1 className="nara-serif text-[26px] leading-tight">
             A home that remembers, reasons, and acts.
           </h1>
         </div>
+        {director ? (
+          <button
+            type="button"
+            onClick={() => playDemo().catch((error) => console.error(error))}
+            disabled={director.running}
+            className="h-11 rounded-full bg-sage px-5 text-[15px] font-semibold text-cream disabled:opacity-60"
+          >
+            {director.running ? "Playing…" : "Play demo"}
+          </button>
+        ) : null}
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 min-[1180px]:grid-cols-[340px_minmax(0,1fr)_220px]">
         <HomeownerPane
           frame={frame}
           view={view}
+          live={liveFrame.live}
           onReport={() => go(1)}
           onRequest={requestTechnician}
           onAccept={acceptCounteroffer}
@@ -158,7 +194,11 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
             onOfferInstead={offerInstead}
           />
         </section>
-        <ActivityPane frame={{ ...frame, inspector: inspectorFor(frame.inspector, view, appointment) }} />
+        {liveFrame.events.length > 0 ? (
+          <LiveActivityPane frame={liveFrame} />
+        ) : (
+          <ActivityPane frame={{ ...frame, inspector: inspectorFor(frame.inspector, view, appointment) }} />
+        )}
       </div>
 
       <PresenterBar

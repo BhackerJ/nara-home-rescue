@@ -21,6 +21,7 @@ import { ServiceHistory } from "./ServiceHistory";
 import { CompletedScreen, EnRouteScreen, OnSiteScreen } from "./VisitScreens";
 
 export function HomeownerPane({
+  live,
   frame,
   view,
   onReport,
@@ -29,6 +30,7 @@ export function HomeownerPane({
   onDecline,
   scheduled,
 }: {
+  live?: LiveBits;
   frame: DemoFrame;
   view: AppointmentView;
   onReport: () => void;
@@ -46,6 +48,7 @@ export function HomeownerPane({
         <div key={frame.homeowner} className="flex h-full min-h-0 flex-col">
           <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto">
             <Screen
+          live={live}
               screen={frame.homeowner}
               roster={frame.roster}
               preference={frame.preference}
@@ -68,6 +71,7 @@ export function HomeownerPane({
 }
 
 function Screen({
+  live,
   screen,
   roster,
   preference,
@@ -77,6 +81,7 @@ function Screen({
   onDecline,
   scheduled,
 }: {
+  live?: LiveBits;
   screen: HomeownerScreen;
   roster: RosterTech[];
   preference: RosterTech | null;
@@ -88,7 +93,7 @@ function Screen({
 }) {
   const tech = rosterTech(roster, view.technicianId) ?? preference;
   const windowLabel = view.windowLabel ?? tech?.availabilityLabel ?? "";
-  if (view.phase === "waiting" && !tech) return <MatchScreen roster={roster} onRequest={onRequest} />;
+  if (view.phase === "waiting" && !tech) return <MatchScreen roster={roster} onRequest={onRequest} live={live} />;
   if (view.phase === "waiting" && tech) return <AuthorizedScreen tech={tech} windowLabel={windowLabel} />;
   if (view.phase === "counteroffer" && tech) {
     return (
@@ -111,8 +116,8 @@ function Screen({
   if (screen === "twin") return <TwinScreen scheduled={scheduled} />;
   if (screen === "report") return <ReportScreen />;
   if (screen === "context") return <ContextScreen />;
-  if (screen === "assessment") return <AssessmentScreen />;
-  if (screen === "matching") return <MatchScreen roster={roster} onRequest={onRequest} />;
+  if (screen === "assessment") return <AssessmentScreen live={live} />;
+  if (screen === "matching") return <MatchScreen roster={roster} onRequest={onRequest} live={live} />;
   if (tech) return <ConfirmedScreen tech={tech} windowLabel={windowLabel} />;
   return <ReportScreen />;
 }
@@ -221,15 +226,28 @@ function ContextScreen() {
   );
 }
 
-function AssessmentScreen() {
+function AssessmentScreen({ live }: { live?: LiveBits }) {
   return (
     <Phone>
       <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-sage-deep">
-        Nara’s read
+        Nara’s read{live?.assessment ? " · OpenAI, from the Home Twin" : ""}
       </p>
-      <h1 className="nara-serif animate-rise mt-4 text-[32px] leading-tight font-medium">
-        Air is moving inside. The outdoor unit is not running.
-      </h1>
+      {live?.assessment ? (
+        <p className="animate-rise mt-4 text-[17px] leading-relaxed text-ink">
+          {live.assessment}
+          {live.typing ? (
+            <span
+              aria-hidden
+              className="ml-0.5 inline-block w-[2px] animate-pulse bg-sage-deep align-text-bottom"
+              style={{ height: "1em" }}
+            />
+          ) : null}
+        </p>
+      ) : (
+        <h1 className="nara-serif animate-rise mt-4 text-[32px] leading-tight font-medium">
+          Air is moving inside. The outdoor unit is not running.
+        </h1>
+      )}
       <ServiceHistory records={historicalServiceRecords()} />
       <p className="mt-2 text-[15px] leading-relaxed text-ink/80">
         Retrieved from this home. These completed records do not confirm the cause of today’s visit.
@@ -244,9 +262,11 @@ function AssessmentScreen() {
 function MatchScreen({
   roster,
   onRequest,
+  live,
 }: {
   roster: RosterTech[];
   onRequest: (id: TechId) => void;
+  live?: LiveBits;
 }) {
   const [showOther, setShowOther] = useState(false);
   const [whyId, setWhyId] = useState<TechId | null>(null);
@@ -259,6 +279,16 @@ function MatchScreen({
       <h1 className="nara-serif animate-rise mt-3 text-[30px] leading-tight font-medium">
         I found technicians for this home.
       </h1>
+      {live?.technician && live.offerReason ? (
+        <div className="animate-rise mt-3 rounded-2xl bg-gold-soft px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink/70">
+            Cool Air’s dispatcher · OpenAI decision
+          </p>
+          <p className="mt-1 text-[15px] leading-snug text-ink">
+            <strong>{live.technician.name}</strong>, {live.technician.title}. {live.offerReason}
+          </p>
+        </div>
+      ) : null}
       <p className="animate-rise delay-1 mt-3 text-[15px] leading-relaxed text-muted">
         For the 2014 Carrier, and a visit today. A fit for the visit, not a diagnosis.
       </p>
@@ -505,3 +535,12 @@ function historyForVisit() {
   if (!prior) return "Completed service records are history. They are not a confirmed fault.";
   return `The ${prior.year} ${prior.title.toLowerCase()} is history for the visit. It is not a confirmed fault.`;
 }
+
+/** The live case's LLM output, from apps/nara-home-rescue/src/data/live.ts (DemoFrame.live). */
+export type LiveBits = {
+  assessment?: string;
+  typing?: boolean;
+  technician?: { name: string; title: string };
+  offerReason?: string;
+  acceptReason?: string;
+};
