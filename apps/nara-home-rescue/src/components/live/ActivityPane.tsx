@@ -38,7 +38,8 @@ export function ActivityPane({ frame }: { frame: DemoFrame }) {
                   Live
                 </p>
                 <p className="mt-1 text-[15px] leading-snug text-ink/80">
-                  Events from the Durable Actors case and messages over Agent Relay.
+                  Every row is a real event: Durable Actors state, Agent Relay messages, OpenAI
+                  decisions, Supabase writes.
                 </p>
               </>
             ) : (
@@ -64,6 +65,24 @@ export function ActivityPane({ frame }: { frame: DemoFrame }) {
                 </div>
                 <p className="text-[15px] font-semibold">{event.title}</p>
                 <p className="text-[14px] leading-snug text-ink/75">{event.detail}</p>
+                {event.tags?.length ? (
+                  <ul className="mt-1.5 flex flex-wrap gap-1">
+                    {event.tags.map((tag) => (
+                      <li
+                        key={tag}
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          tag.startsWith("OpenAI")
+                            ? "bg-gold-soft text-ink"
+                            : tag.startsWith("caught up")
+                              ? "bg-gold text-cream"
+                              : "bg-sage-soft text-sage-deep"
+                        }`}
+                      >
+                        {tag}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ol>

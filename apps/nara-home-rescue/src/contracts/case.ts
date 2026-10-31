@@ -24,6 +24,8 @@ export type ActivityEvent = {
   detail: string;
   /** True when the row is scripted UI, not a backend message. */
   simulated: boolean;
+  /** Live rows only: which sponsor system or model produced this step. */
+  tags?: string[];
 };
 
 export type HistoryEntry = {

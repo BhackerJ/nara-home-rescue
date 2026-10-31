@@ -125,11 +125,12 @@ export type BookingResult = { slot: string; caseId: string; at: string; key: str
 export type Offer = { caseId: string; requestedSlot: string; requestedTaken: boolean; alternatives: string[] }
 export type Calendar = { slots: string[]; bookings: { [key: string]: Booking }; approved: { [caseId: string]: string } }
 
+// Labels match the presenter UI (apps/nara-home-rescue/src/demo/appointment.ts).
 const SEED_SLOTS = [
-    "Tue 9:00", "Tue 13:00", "Wed 9:00", "Wed 14:00", "Thu 9:00", "Thu 13:00",
-    "Fri 9:00", "Fri 13:00", "Mon 9:00", "Mon 13:00", "Tue 15:00", "Wed 16:00", "Thu 16:00",
+    "Today · 5:30–7:00 PM", "Today · 6:00–8:00 PM", "Tomorrow · 9:00–11:00 AM", "Tomorrow · 1:00–3:00 PM",
+    "Tomorrow · 4:00–6:00 PM", "Thu · 9:00–11:00 AM", "Thu · 1:00–3:00 PM", "Fri · 9:00–11:00 AM", "Fri · 1:00–3:00 PM",
 ]
-const PREFERRED_TAKEN = "Tue 9:00"
+const PREFERRED_TAKEN = "Today · 5:30–7:00 PM"
 
 export class ProviderCalendar extends Actor {
     @Persisted private slots: string[] = []

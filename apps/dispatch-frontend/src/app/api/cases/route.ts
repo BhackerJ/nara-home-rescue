@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     id,
     issue: body.issue ?? "My AC isn't cooling.",
     symptoms: body.symptoms ?? ["Fan runs", "No cold air", "Outdoor unit not running"],
-    preferredSlot: body.preferredSlot ?? "Tue 9:00",
+    preferredSlot: body.preferredSlot ?? "Today · 5:30–7:00 PM",
   };
   try {
     await actors.ServiceCase.get(id).create(input);
