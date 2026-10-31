@@ -14,7 +14,7 @@
     }
   ],
   "history": [
-    { "date": "2023-07-14", "summary": "Run capacitor replaced on the Carrier condenser (45/5 µF)" },
-    { "date": "2021-05-03", "summary": "Annual maintenance: coil cleaned, refrigerant charge checked" }
+    { "date": "2023-07-14", "summary": "Capacitor replaced on the Carrier condenser" },
+    { "date": "2021-05-03", "summary": "Annual maintenance: cooling checked, no parts replaced" }
   ]
 }

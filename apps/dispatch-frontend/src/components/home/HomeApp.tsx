@@ -249,7 +249,7 @@ function ReportForm({
 }
 
 // Display pacing only (design-hackathon §7): the model finishes in ~1 s, so the card reveals the text it already has
-// at ~25 characters per 60 ms. A case that already has its narrative on first render shows it at once.
+// at ~8 characters per 60 ms (≈3 s for 500 chars). A case that already has its narrative on first render shows it at once.
 function useTypewriter(target: string) {
   const [shown, setShown] = useState(target);
   useEffect(() => {
@@ -259,7 +259,7 @@ function useTypewriter(target: string) {
       setShown(target);
       return;
     }
-    const timer = setTimeout(() => setShown(target.slice(0, shown.length + 25)), 60);
+    const timer = setTimeout(() => setShown(target.slice(0, shown.length + 8)), 60);
     return () => clearTimeout(timer);
   }, [shown, target]);
   return shown;
