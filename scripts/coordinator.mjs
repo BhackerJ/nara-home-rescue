@@ -6,6 +6,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import { AgentRelay } from "@agent-relay/sdk";
 import { decide } from "./llm.mjs";
+import { appendHistory, loadTwin } from "./twin.mjs";
 
 try { process.loadEnvFile(".env"); } catch {}
 const { actors } = await import("../generated/actors/index.js");
@@ -14,12 +15,12 @@ const baseUrl = process.env.RELAY_BASE_URL ?? "http://localhost:8787";
 const CHANNEL = "home-rescue";
 const bootId = crypto.randomUUID().slice(0, 8);
 const pid = process.pid;
-const home = JSON.parse(fs.readFileSync("data/home.json", "utf8"));
+const log = (...a) => console.log(new Date().toISOString().slice(11, 23), `[coordinator ${pid}]`, ...a);
+const home = await loadTwin(log); // Supabase home_rescue.*, or data/home.json when unreachable
 const state = JSON.parse(fs.readFileSync("relay/state.json", "utf8"));
 const relay = new AgentRelay({ workspaceKey: state.workspaceKey, baseUrl });
 const dispatch = await relay.workspace.reconnect({ apiToken: state.tokens.dispatch });
 const index = actors.CaseIndex.get("main");
-const log = (...a) => console.log(new Date().toISOString().slice(11, 23), `[coordinator ${pid}]`, ...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Inbox of provider replies, keyed caseId -> kind -> message. Fed by the live listener and by the startup backfill.
@@ -201,9 +202,11 @@ async function step(sc, c) {
     }
     case "booked": {
       const slot = c.results.booked?.slot;
-      const historyEntry = { date: new Date().toISOString().slice(0, 10), summary: `Service visit booked for ${slot}: ${c.data.issue}`, caseId };
-      await sc.completeStep({ step: "home_updated", status: "confirmed", events: [{ type: "home_updated", payload: { historyEntry, homeId: home.id } }], result: { historyEntry } });
-      log(`${caseId}: home twin updated -> confirmed`);
+      const technician = c.results.booked?.technician?.name;
+      const historyEntry = { date: new Date().toISOString().slice(0, 10), summary: `Service visit booked for ${slot}${technician ? ` with ${technician}` : ""}: ${c.data.issue}`, caseId };
+      const stored = await appendHistory(home.id, historyEntry, log); // idempotent on case_id; a failure never blocks the case
+      await sc.completeStep({ step: "home_updated", status: "confirmed", events: [{ type: "home_updated", payload: { historyEntry, homeId: home.id, storedInSupabase: stored } }], result: { historyEntry } });
+      log(`${caseId}: home twin updated (${stored ? "Supabase" : "actor only"}) -> confirmed`);
       return "next";
     }
     default:

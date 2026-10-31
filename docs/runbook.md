@@ -53,3 +53,7 @@ Machine time: ~6 s to `slot_accepted` (diagnosis ~2 s, the shop's technician mat
 - The provider's calendar does not check that a slot is still free when two cases run at once; one demo case at a time.
 - Relay `messages.list` returns at most 100 messages; after a long day of runs, the backfill could miss a very old reply. `reset-demo` does not clear Relay; if backfill ever misses, the live listener still catches new replies.
 - Killing the actor server as well (the design's "pull the plug") is not rehearsed; the demo kills the coordinator only.
+
+## Supabase (wired 14:05)
+
+The coordinator loads the Home Twin from `home_rescue.home / equipment / service_history` in `nara-preview` at boot (terminal 5 logs `twin: loaded from Supabase`; if it says `using data/home.json`, the network or the project is down and the demo still runs on the file) and writes one `service_history` row per confirmed case (idempotent on `case_id`). Needs `HOME_RESCUE_DATABASE_URL` and `DATABASE_SSL=insecure` in `.env`. The seed rows there must match the screen (Hayward, 2021 maintenance); see the SQL in the 14:05 chat note if they still say Palo Alto / 2025.
