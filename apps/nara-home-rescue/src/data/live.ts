@@ -166,6 +166,7 @@ export function frameFromCase(c: ServiceCase | null, reachable: boolean): DemoFr
   const past = (id: StageId) => index >= stageIndex(id);
   const assessment = c.diagnostic?.narrative || c.draftDiagnosis || "";
   const offeredSlot = c.counteroffer?.alternatives[0];
+  const negotiation = readNegotiation(c.events);
 
   const history: HistoryEntry[] = BASE_HISTORY.map((entry, i) =>
     i === 0 && past("context") ? { ...entry, emphasis: "context" } : entry,
@@ -216,11 +217,55 @@ export function frameFromCase(c: ServiceCase | null, reachable: boolean): DemoFr
       offeredSlot,
       confirmedSlot: c.confirmedSlot,
       assessment: assessment || undefined,
+      ...negotiation,
       workerPid: c.worker?.pid,
       recovery: c.recovery,
       canConfirm: c.checkpoint === "slot_accepted" && c.status === "awaiting_provider",
     },
   };
+}
+
+type Technician = { name: string; title: string };
+
+/** The latest reject, accept and confirm messages carry the shop's technician and the LLM reasons. */
+function readNegotiation(events: CaseEvent[]): {
+  technician?: Technician;
+  offerReason?: string;
+  acceptReason?: string;
+} {
+  const out: { technician?: Technician; offerReason?: string; acceptReason?: string } = {};
+  for (const event of events) {
+    if (event.type !== "agent_message") continue;
+    const body = parseBody(event.payload.body);
+    const technician = body.technician as Technician | undefined;
+    switch (event.payload.kind) {
+      case "reject":
+        if (technician?.name) out.technician = technician;
+        out.offerReason = nonEmpty(body.reason);
+        break;
+      case "accept":
+        out.acceptReason = nonEmpty(body.reason);
+        break;
+      case "confirm":
+        if (technician?.name) out.technician = technician;
+        break;
+    }
+  }
+  return out;
+}
+
+function nonEmpty(value: unknown): string | undefined {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || undefined;
+}
+
+function parseBody(body: unknown): Record<string, unknown> {
+  if (typeof body !== "string") return (body as Record<string, unknown>) ?? {};
+  try {
+    return JSON.parse(body) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
 }
 
 const MESSAGE_TITLE: Record<string, string> = {
@@ -257,13 +302,13 @@ function activityRow(event: CaseEvent): ActivityEvent[] {
       return row(
         "provider",
         p.reused ? "Booking reused" : "Slot booked",
-        `${String(p.slot)} · key ${String(p.idempotencyKey)}`,
+        `${String(p.slot)}${p.technician ? ` · ${String(p.technician)}` : ""} · key ${String(p.idempotencyKey)}`,
       );
     case "home_updated":
       return row(
         "actor",
         "Home Twin updated",
-        String((p.historyEntry as { summary?: string } | undefined)?.summary ?? "Scheduled visit saved on this home."),
+        `${String((p.historyEntry as { summary?: string } | undefined)?.summary ?? "Scheduled visit saved on this home.")}${p.storedInSupabase ? " · stored in Supabase" : ""}`,
       );
     case "error":
       return row("actor", "Error", String(p.message ?? ""));
@@ -274,22 +319,20 @@ function activityRow(event: CaseEvent): ActivityEvent[] {
 
 /** Relay bodies are JSON (`{ kind, requestedSlot, alternatives, slot }`); say them in words. */
 function messageText(kind: string, body: unknown): string {
-  let m: Record<string, unknown> = {};
-  try {
-    m = typeof body === "string" ? JSON.parse(body) : ((body as Record<string, unknown>) ?? {});
-  } catch {
-    return String(body ?? "");
-  }
+  const m = parseBody(body);
   const alternatives = Array.isArray(m.alternatives) ? m.alternatives.join(" or ") : "";
+  const technician = m.technician as Technician | undefined;
+  const who = technician?.name ? `${technician.name}, ${technician.title}` : "";
+  const reason = nonEmpty(m.reason);
   switch (kind) {
     case "slot_request":
       return `Requested ${String(m.requestedSlot ?? "")} for the repair.`;
     case "reject":
-      return `${String(m.requestedSlot ?? "")} is taken. Offered ${alternatives}.`;
+      return `${String(m.requestedSlot ?? "")} is taken. Offered ${alternatives}.${who ? ` Proposing ${who}.` : ""}${reason ? ` ${reason}` : ""}`;
     case "accept":
-      return `Accepted ${String(m.slot ?? "")}.`;
+      return `Accepted ${String(m.slot ?? "")}.${reason ? ` ${reason}` : ""}`;
     case "confirm":
-      return `Confirmed ${String(m.slot ?? "")}. Technician booked.`;
+      return `Confirmed ${String(m.slot ?? "")}${technician?.name ? ` with ${technician.name}` : ""}. Technician booked.`;
     default:
       return typeof body === "string" ? body : JSON.stringify(body);
   }

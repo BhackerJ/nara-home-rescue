@@ -117,14 +117,20 @@ function Appointment({ frame, onConfirm }: { frame: DemoFrame; onConfirm?: () =>
   const requested = frame.live?.requestedSlot || REQUESTED_SLOT;
   const offered = frame.live?.offeredSlot ?? ALTERNATE_SLOT;
   const confirmed = frame.live?.confirmedSlot ?? offered;
+  const technician = frame.live?.technician;
   const copy =
     frame.slot === "rejected"
       ? { label: "Unavailable", title: requested, note: "Cool Air already has this window." }
       : frame.slot === "counteroffer"
         ? { label: "Counteroffer", title: offered, note: `Offered instead of ${requested}.` }
         : frame.slot === "confirmed"
-          ? { label: "Confirmed", title: confirmed, note: "Cool Air Mechanical." }
+          ? {
+              label: "Confirmed",
+              title: technician ? `${confirmed} · ${technician.name}` : confirmed,
+              note: technician ? `${technician.title} · Cool Air Mechanical.` : "Cool Air Mechanical.",
+            }
           : { label: "Requested", title: requested, note: "Asked first." };
+  const showTechnician = technician && (frame.slot === "rejected" || frame.slot === "counteroffer");
 
   return (
     <article
@@ -134,6 +140,18 @@ function Appointment({ frame, onConfirm }: { frame: DemoFrame; onConfirm?: () =>
       <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-muted">{copy.label}</p>
       <p className="nara-serif mt-1 text-[26px] leading-tight">{copy.title}</p>
       <p className="mt-1 text-[15px] text-ink/75">{copy.note}</p>
+      {showTechnician ? (
+        <div className="mt-3 rounded-2xl bg-sage-soft px-4 py-3">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-sage-deep">
+            Assigned technician
+          </p>
+          <p className="mt-1 text-[18px] font-semibold">{technician.name}</p>
+          <p className="text-[15px] text-ink/75">{technician.title}</p>
+          {frame.live?.offerReason ? (
+            <p className="mt-2 text-[15px] leading-snug text-ink/85">{frame.live.offerReason}</p>
+          ) : null}
+        </div>
+      ) : null}
       {frame.live?.canConfirm && onConfirm ? (
         <button
           type="button"

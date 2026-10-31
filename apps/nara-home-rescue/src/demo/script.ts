@@ -133,6 +133,12 @@ export type DemoFrame = {
     assessment?: string;
     /** The assessment is still being typed out on screen. */
     typing?: boolean;
+    /** Proposed by the shop's reject, confirmed by its confirm. */
+    technician?: { name: string; title: string };
+    /** Why the shop proposes this technician (LLM, may be empty). */
+    offerReason?: string;
+    /** Why dispatch picked this slot (LLM, may be empty). */
+    acceptReason?: string;
     workerPid?: number;
     recovery?: { previousPid: number; pid: number; fromCheckpoint: string };
     canConfirm: boolean;

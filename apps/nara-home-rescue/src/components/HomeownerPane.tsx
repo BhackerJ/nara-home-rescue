@@ -115,6 +115,9 @@ function HomeownerMoment({ frame, onReport }: { frame: DemoFrame; onReport?: () 
           {frame.slot === "counteroffer"
             ? `Cool Air Mechanical can come ${frame.live?.offeredSlot ?? ALTERNATE_SLOT}.`
             : "A technician-ready request is with Cool Air Mechanical."}
+          {frame.slot === "counteroffer" && frame.live?.acceptReason
+            ? ` ${frame.live.acceptReason}`
+            : null}
         </p>
       ) : null}
       {frame.homeowner === "confirmed" ? (
@@ -124,8 +127,11 @@ function HomeownerMoment({ frame, onReport }: { frame: DemoFrame; onReport?: () 
           </p>
           <p className="nara-serif mt-1 text-[24px] leading-tight">
             {frame.live?.confirmedSlot ?? ALTERNATE_SLOT}
+            {frame.live?.technician ? ` · ${frame.live.technician.name}` : null}
           </p>
-          <p className="mt-1 text-[15px] text-ink/75">Cool Air Mechanical</p>
+          <p className="mt-1 text-[15px] text-ink/75">
+            {frame.live?.technician ? `${frame.live.technician.title} · ` : null}Cool Air Mechanical
+          </p>
           {frame.stage === "remembered" ? (
             <p className="mt-2 text-[15px] font-medium text-sage-deep">Saved on this home.</p>
           ) : null}
