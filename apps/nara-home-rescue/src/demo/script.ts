@@ -13,10 +13,6 @@ export const STEPS = [
   { id: "assessment", label: "AI assessment" },
   { id: "matching", label: "Technician recommendations" },
   { id: "authorized", label: "Homeowner authorization" },
-  { id: "availability", label: "Provider availability" },
-  { id: "counteroffer", label: "Counteroffer" },
-  { id: "checkpoint", label: "Persisted case state" },
-  { id: "confirmed", label: "Appointment confirmed" },
   { id: "enroute", label: "Optional · Technician on the way" },
   { id: "onsite", label: "Optional · On-site service" },
   { id: "complete", label: "Optional · Home Twin updated" },
@@ -88,10 +84,6 @@ const HOMEOWNER: HomeownerScreen[] = [
   "assessment",
   "matching",
   "authorized",
-  "unavailable",
-  "counteroffer",
-  "held",
-  "confirmed",
   "enroute",
   "onsite",
   "complete",
@@ -104,10 +96,6 @@ const SHOP: ShopPhase[] = [
   "waiting",
   "waiting",
   "packet",
-  "unavailable",
-  "counteroffer",
-  "held",
-  "confirmed",
   "enroute",
   "onsite",
   "complete",
@@ -156,22 +144,8 @@ function fixtureAt(index: number): FixtureCase {
   if (index === 5) {
     return { source: "simulated-fixture", caseId: CASE_ID, status: "dispatching", checkpoint: "job_packet" };
   }
-  if (index === 6) {
-    return {
-      source: "simulated-fixture",
-      caseId: CASE_ID,
-      status: "awaiting_provider",
-      checkpoint: "slot_requested",
-    };
-  }
-  if (index === 7 || index === 8) {
-    return {
-      source: "simulated-fixture",
-      caseId: CASE_ID,
-      status: "negotiating",
-      checkpoint: "counteroffer",
-    };
-  }
+  // The negotiation, the checkpoint and the confirmation are the live case's story now
+  // (the agent log on the right); the journey screens assume it ended in a booking.
   return { source: "simulated-fixture", caseId: CASE_ID, status: "confirmed", checkpoint: "booked" };
 }
 
@@ -222,35 +196,6 @@ function inspectorAt(
       from: "Homeowner",
       to: "Cool Air Mechanical",
       relay: `Simulated handoff. Preference: ${name}. Not a confirmed assignment.`,
-      recovery: "No recovery event",
-    },
-    {
-      agent: "Provider",
-      from: "Provider",
-      to: "Dispatch",
-      relay: "The requested slot stays open until the shop decides.",
-      recovery: "No recovery event",
-    },
-    {
-      agent: "Provider",
-      from: "Provider",
-      to: "Dispatch",
-      relay: "No provider decision is recorded on this step.",
-      recovery: "No recovery event",
-    },
-    {
-      agent: "Durable Actor",
-      from: "Case record",
-      to: "Presenter",
-      relay: "No new relay message",
-      recovery:
-        "Recovery is not available. This fixture still shows checkpoint counteroffer. No process was stopped.",
-    },
-    {
-      agent: "Provider",
-      from: "Provider",
-      to: "Home Twin",
-      relay: "No confirmation is recorded until the shop confirms the requested slot.",
       recovery: "No recovery event",
     },
     {

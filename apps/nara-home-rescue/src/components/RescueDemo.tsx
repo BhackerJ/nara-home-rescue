@@ -42,20 +42,34 @@ const REVEALED_BY_STEP: Record<StepId, number> = {
   context: 0,
   assessment: 1,
   matching: 1,
-  authorized: 2,
-  availability: 3,
-  counteroffer: 4,
-  checkpoint: 5,
-  confirmed: 8,
+  authorized: 4,
   enroute: 8,
   onsite: 8,
   complete: 8,
 };
 
+/** The journey screens show the visit as booked for the requested technician: the
+ *  negotiation and the confirmation happen in the live case, not in the presenter. */
+const JOURNEY_STEPS = new Set<StepId>(["enroute", "onsite", "complete"]);
+
+function journeyView(stepId: StepId, appointment: AppointmentCase): AppointmentCase {
+  if (!JOURNEY_STEPS.has(stepId) || appointment.appointmentStatus === "confirmed") return appointment;
+  return {
+    ...appointment,
+    appointmentStatus: "confirmed",
+    providerDecision: "confirmed",
+    confirmedTechnicianId: appointment.requestedTechnicianId ?? "alex",
+    confirmedSlotId: appointment.requestedSlotId ?? "alex-today",
+  };
+}
+
 export function RescueDemo({ mode }: { mode: DataMode }) {
   const port = developmentCasePort;
   const snapshot = useSyncExternalStore(port.subscribe, port.getSnapshot, port.getServerSnapshot);
-  const { step, appointment } = snapshot;
+  const { step: storedStep, appointment: stored } = snapshot;
+  // The stored index may come from an older, longer step list.
+  const step = Math.min(storedStep, STEPS.length - 1);
+  const appointment = journeyView(STEPS[step].id, stored);
   const frame = frameAt(
     step,
     appointment.confirmedTechnicianId ?? appointment.requestedTechnicianId ?? "alex",
