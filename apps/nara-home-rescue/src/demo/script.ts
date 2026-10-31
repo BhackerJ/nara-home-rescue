@@ -131,6 +131,8 @@ export type DemoFrame = {
     offeredSlot?: string;
     confirmedSlot?: string;
     assessment?: string;
+    /** The assessment is still being typed out on screen. */
+    typing?: boolean;
     workerPid?: number;
     recovery?: { previousPid: number; pid: number; fromCheckpoint: string };
     canConfirm: boolean;

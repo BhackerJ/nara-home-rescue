@@ -74,6 +74,36 @@ export function useLiveCase(pollMs = 300): { current: ServiceCase | null; reacha
   return { current, reachable };
 }
 
+/**
+ * Display pacing for the assessment (design-hackathon §7: the frontend paces,
+ * the backend adds no delay). `shown` catches up to `target` by `step`
+ * characters every `intervalMs`: about 3.5 s for a 470-character assessment. A case that is already past diagnosis when it
+ * first appears (reopened page) shows its text at once.
+ */
+export function useTypewriter(
+  target: string,
+  caseId: string,
+  instant: boolean,
+  step = 8,
+  intervalMs = 60,
+): { shown: string; typing: boolean } {
+  // Progress is keyed by case so a new case restarts from zero without a reset effect.
+  const [progress, setProgress] = useState({ caseId, count: 0 });
+  const count = progress.caseId === caseId ? progress.count : 0;
+  const shownCount = count === 0 && instant ? target.length : Math.min(count, target.length);
+
+  useEffect(() => {
+    if (shownCount >= target.length) return;
+    const timer = setTimeout(
+      () => setProgress({ caseId, count: Math.min(shownCount + step, target.length) }),
+      intervalMs,
+    );
+    return () => clearTimeout(timer);
+  }, [caseId, shownCount, target.length, step, intervalMs]);
+
+  return { shown: target.slice(0, shownCount), typing: shownCount < target.length };
+}
+
 /** Homeowner "Report a problem": the backend fills in the demo issue and symptoms. */
 export async function createCase(): Promise<string> {
   const res = await fetch("/api/cases", {

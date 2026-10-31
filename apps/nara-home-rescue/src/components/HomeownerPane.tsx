@@ -100,6 +100,13 @@ function HomeownerMoment({ frame, onReport }: { frame: DemoFrame; onReport?: () 
           <p className="mt-2 text-[16px] leading-snug text-ink">
             {frame.live?.assessment ??
               "Air is moving inside. The outdoor unit is not running. The 2023 capacitor replacement is useful context for the technician. It is not a confirmed fault."}
+            {frame.live?.typing ? (
+              <span
+                aria-hidden
+                className="ml-0.5 inline-block w-[2px] animate-pulse bg-sage-deep align-text-bottom"
+                style={{ height: "1em" }}
+              />
+            ) : null}
           </p>
         </article>
       ) : null}

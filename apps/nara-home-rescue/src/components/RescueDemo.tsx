@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { DataMode } from "@/data/adapters";
-import { confirmCase, createCase, frameFromCase, useLiveCase } from "@/data/live";
+import { confirmCase, createCase, frameFromCase, useLiveCase, useTypewriter } from "@/data/live";
 import { frameAt, STAGES, type DemoFrame } from "@/demo/script";
 import { ActivityPane } from "./ActivityPane";
 import { HomeownerPane } from "./HomeownerPane";
@@ -39,7 +39,19 @@ function ScriptedDemo() {
 
 function LiveDemo() {
   const { current, reachable } = useLiveCase();
-  const frame = frameFromCase(current, reachable);
+  const raw = frameFromCase(current, reachable);
+  const { shown, typing } = useTypewriter(
+    raw.live?.assessment ?? "",
+    raw.caseId,
+    raw.checkpoint !== "created" && raw.checkpoint !== "diagnosed",
+  );
+  const frame: DemoFrame = raw.live
+    ? {
+        ...raw,
+        showAssessment: shown.length > 0,
+        live: { ...raw.live, assessment: shown || undefined, typing },
+      }
+    : raw;
   const [busy, setBusy] = useState(false);
 
   async function report() {
