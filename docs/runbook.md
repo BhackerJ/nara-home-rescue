@@ -40,6 +40,18 @@ Then open `http://localhost:3100/home` (homeowner) and `http://localhost:3100/di
 
 Machine time: ~6 s to `slot_accepted` (diagnosis ~2 s, the shop's technician match ~1 s, the slot choice ~1 s, each an OpenAI call), then as long as you talk, then ~1 s after the restart. The three LLM decisions are: the diagnosis (streams), the shop's technician pick with a reason, the dispatcher's slot pick with a reason.
 
+## Automatic run (backup video, pre-show check)
+
+With terminals 1–3 up and terminals 4–5 **closed**, open `http://localhost:3000` and run from the repo root:
+
+```
+node scripts/auto-demo.mjs            # runs the whole story; provider + coordinator stay up afterwards (Ctrl-C stops them)
+node scripts/auto-demo.mjs --once     # same, then stops everything
+node scripts/auto-demo.mjs --pause 5  # hold 5 s at the CONFIRM moment before the kill (default 3)
+```
+
+It resets, starts both agents, files the case, waits for `slot_accepted`, pauses, `kill -9`s the coordinator, sends the shop's CONFIRM, restarts the coordinator and waits for `confirmed`. The last line reports the booking count, whether the confirm was caught up from Relay, and the old → new pid; about 15 s end to end. It exits non-zero if anything is off. Never run it while terminals 4–5 are open: two providers would answer the same request.
+
 ## If it breaks
 
 - Nothing streams on `/home` within 5 s: terminal 5 shows the error. If it is OpenAI, the coordinator falls back to a fixed narrative only when the key is missing; if the key is bad, fix `.env` and restart terminal 5. The case resumes from `created`.
