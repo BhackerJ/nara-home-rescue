@@ -208,6 +208,13 @@ export function DispatchApp({
             appointmentStatus={appointmentStatus}
             onConfirmRequested={onConfirmRequested}
             onOfferInstead={onOfferInstead}
+            confirmedAssignment={
+              confirmedTechId
+                ? roster
+                    .filter((tech) => tech.id === confirmedTechId)
+                    .map((tech) => ({ name: tech.name, window: tech.window }))[0] ?? null
+                : null
+            }
             onWhy={() => setShowWhy(true)}
             onPreview={(id) => setPreviewTechId(id)}
             onConfirm={() => {
@@ -326,7 +333,7 @@ function FlowBanner({ flow, roster }: { flow: Flow; roster: Technician[] }) {
         : flow.step === "suggested"
           ? `Cool Air Mechanical suggested ${first} instead`
           : flow.step === "confirmed"
-            ? `${first} confirmed · slot booked by Nara`
+            ? `Assigned: ${tech?.name ?? first} — Confirmed.`
             : null;
 
   if (!copy) return null;
@@ -635,6 +642,7 @@ function MatchingSection({
   appointmentStatus = "idle",
   onConfirmRequested,
   onOfferInstead,
+  confirmedAssignment = null,
   onWhy,
   onPreview,
   onConfirm,
@@ -649,6 +657,7 @@ function MatchingSection({
   appointmentStatus?: string;
   onConfirmRequested?: () => void;
   onOfferInstead?: (technicianId: string, reason: string) => void;
+  confirmedAssignment?: { name: string; window: string } | null;
   onWhy: () => void;
   onPreview: (id: string) => void;
   onConfirm: () => void;
@@ -657,15 +666,18 @@ function MatchingSection({
   const [offerId, setOfferId] = useState<string | null>(null);
   const [reason, setReason] = useState(EMERGENCY_REASON);
   const assignedId = "techId" in flow ? flow.techId : null;
+  const confirmed = appointmentStatus === "confirmed" && confirmedAssignment;
   return (
     <section className="rounded-[24px] bg-cream p-5 ring-1 ring-line/70">
       <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-muted">
         Matching / assignment
       </p>
       <h2 className="nara-serif mt-2 text-[26px] leading-tight">
-        {requestVisible
-          ? `Nara found ${available.length} available ${available.length === 1 ? "match" : "matches"}`
-          : "Rankings wait for a request"}
+        {confirmed
+          ? `Assigned: ${confirmedAssignment.name} — Confirmed.`
+          : requestVisible
+            ? `Nara found ${available.length} available ${available.length === 1 ? "match" : "matches"}`
+            : "Rankings wait for a request"}
       </h2>
       <p className="mt-2 text-[13px] text-muted">
         Ranked against published Nara capacity only.
@@ -677,7 +689,12 @@ function MatchingSection({
         </p>
       ) : null}
 
-      {requestVisible ? (
+      {confirmed ? (
+        <p className="mt-4 text-[14px] leading-relaxed text-ink/80">
+          Today · {confirmedAssignment.window} is booked for this case. Other published technicians
+          stay available for other requests.
+        </p>
+      ) : requestVisible ? (
       <>
       <div className="mt-4 space-y-3">
         {available.map((item) => {
@@ -718,7 +735,7 @@ function MatchingSection({
                     onClick={onConfirmRequested}
                     className="h-10 rounded-full bg-sage px-4 text-[13px] font-semibold text-cream"
                   >
-                    Confirm {first}
+                    Confirm {first} — {item.technician.window}
                   </button>
                 ) : onOfferInstead &&
                   requestedTechnicianId &&
@@ -729,7 +746,7 @@ function MatchingSection({
                     onClick={() => setOfferId(offerId === item.technician.id ? null : item.technician.id)}
                     className="h-10 rounded-full px-4 text-[13px] font-semibold text-ink ring-1 ring-line"
                   >
-                    Offer {first} instead
+                    Offer alternative
                   </button>
                 ) : appointmentStatus === "confirmed" && item.technician.id === assignedId ? (
                   <p className="text-[13px] font-semibold text-sage-deep">Assigned to this case</p>

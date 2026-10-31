@@ -200,7 +200,7 @@ function RouteMap() {
         <circle cx="308" cy="42" r="4" fill="#fffcf7" />
       </svg>
       <div className="absolute bottom-3 left-3 rounded-full bg-paper/95 px-3 py-1.5 text-[12px] font-semibold text-ink shadow-sm">
-        Illustrated route · not live tracking
+        Illustrated route — simulated tracking
       </div>
     </div>
   );

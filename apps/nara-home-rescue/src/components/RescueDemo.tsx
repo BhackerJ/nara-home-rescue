@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import {
   APPOINTMENT_SLOTS,
   APPOINTMENT_TECHNICIANS,
   capacityForSlot,
   describeAppointment,
-  emptyAppointment,
-  reduceAppointment,
-  slotIdForTechnician,
   type AppointmentCase,
   type AppointmentView,
 } from "@/demo/appointment";
+import { developmentCasePort } from "@/demo/caseStore";
 import type { DataMode } from "@/data/adapters";
 import {
   frameFromCase,
@@ -25,16 +23,16 @@ import {
 import { LiveRescueDemo } from "./LiveRescueDemo";
 import { ActivityPane as LiveActivityPane } from "./live/ActivityPane";
 import type { TechId } from "@/demo/roster";
-import { clampStep, frameAt, STEPS, type InspectorSnapshot, type StepId } from "@/demo/script";
+import { frameAt, STEPS, type InspectorSnapshot, type StepId } from "@/demo/script";
 import { DispatchApp } from "@/capacity/dispatch/DispatchApp";
 import { ActivityPane } from "./ActivityPane";
 import { HomeownerPane } from "./HomeownerPane";
 
 /**
  * The presentation index only chooses a screen.
- * The appointment case is the only source for technician, slot, and status.
+ * The development adapter is the shared case for both panes.
  * Next, Previous, and the arrow keys never confirm, reject, or reschedule.
- * Reset clears this simulated case. It does not call a backend delete.
+ * Reset clears that local case. It does not call a backend delete.
  */
 /** How many of the case's visible events each screen shows (order: diagnosed, slot_request,
  *  reject, accept, recovery, confirm, booking, home_updated). */
@@ -55,11 +53,13 @@ const REVEALED_BY_STEP: Record<StepId, number> = {
 };
 
 export function RescueDemo({ mode }: { mode: DataMode }) {
-  const [step, setStep] = useState(0);
-  const [techId, setTechId] = useState<TechId>("alex");
-  const [appointment, setAppointment] = useState<AppointmentCase>(emptyAppointment);
-  const seen = useRef(new Set<string>());
-  const frame = frameAt(step, appointment.confirmedTechnicianId ?? appointment.requestedTechnicianId ?? techId);
+  const port = developmentCasePort;
+  const snapshot = useSyncExternalStore(port.subscribe, port.getSnapshot, port.getServerSnapshot);
+  const { step, appointment } = snapshot;
+  const frame = frameAt(
+    step,
+    appointment.confirmedTechnicianId ?? appointment.requestedTechnicianId ?? "alex",
+  );
   const view = describeAppointment(frame.stepId, appointment);
   const last = STEPS.length - 1;
 
@@ -77,60 +77,9 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
   const liveBits = fullLive ? { ...fullLive, assessment: shown || undefined, typing } : undefined;
   const director = useDirector();
 
-  function go(next: number) {
-    const target = clampStep(next);
-    if (target === step) return;
-    if (target > step) {
-      const key = `fixture-view:${STEPS[target].id}`;
-      seen.current.add(key);
-    }
-    setStep(target);
-  }
-
   function requestTechnician(id: TechId) {
-    const slotId = slotIdForTechnician(id);
-    if (!slotId) return;
-    setTechId(id);
-    setAppointment((current) =>
-      reduceAppointment(current, {
-        type: "request",
-        technicianId: id,
-        slotId,
-      }),
-    );
-    go(5);
-  }
-
-  function confirmRequested() {
-    setAppointment((current) => reduceAppointment(current, { type: "confirm-requested" }));
-  }
-
-  function offerInstead(technicianId: string, reason: string) {
-    const slotId = slotIdForTechnician(technicianId);
-    if (!slotId || (technicianId !== "alex" && technicianId !== "maria")) return;
-    setAppointment((current) =>
-      reduceAppointment(current, {
-        type: "counteroffer",
-        technicianId,
-        slotId,
-        reason,
-      }),
-    );
-  }
-
-  function acceptCounteroffer() {
-    setAppointment((current) => reduceAppointment(current, { type: "accept-counteroffer" }));
-  }
-
-  function declineCounteroffer() {
-    setAppointment((current) => reduceAppointment(current, { type: "decline-counteroffer" }));
-  }
-
-  function reset() {
-    seen.current.clear();
-    setTechId("alex");
-    setAppointment(emptyAppointment());
-    setStep(0);
+    if (id !== "alex" && id !== "maria") return;
+    port.request(id);
   }
 
   useEffect(() => {
@@ -145,17 +94,11 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
       }
       if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
       event.preventDefault();
-      setStep((current) => {
-        const targetStep = clampStep(event.key === "ArrowRight" ? current + 1 : current - 1);
-        if (targetStep > current) {
-          seen.current.add(`fixture-view:${STEPS[targetStep].id}`);
-        }
-        return targetStep;
-      });
+      port.setStep(port.getSnapshot().step + (event.key === "ArrowRight" ? 1 : -1));
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [port]);
 
   if (mode === "backend") {
     return <LiveRescueDemo mode="backend" />;
@@ -191,10 +134,10 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
           frame={frame}
           view={view}
           live={liveBits}
-          onReport={() => go(1)}
+          onReport={() => port.setStep(1)}
           onRequest={requestTechnician}
-          onAccept={acceptCounteroffer}
-          onDecline={declineCounteroffer}
+          onAccept={() => port.acceptCounteroffer()}
+          onDecline={() => port.declineCounteroffer()}
           scheduled={scheduledVisit(appointment)}
         />
         <section aria-label="HVAC shop" className="min-h-0 overflow-hidden rounded-[28px] ring-1 ring-line/80">
@@ -209,8 +152,11 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
             }}
             requestedTechnicianId={appointment.requestedTechnicianId}
             appointmentStatus={appointment.appointmentStatus}
-            onConfirmRequested={confirmRequested}
-            onOfferInstead={offerInstead}
+            onConfirmRequested={() => port.confirmRequested()}
+            onOfferInstead={(technicianId, reason) => {
+              if (technicianId !== "alex" && technicianId !== "maria") return;
+              port.counteroffer(technicianId, reason);
+            }}
           />
         </section>
         {liveFrame.events.length > 0 ? (
@@ -224,9 +170,9 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
         step={step}
         last={last}
         label={frame.stepLabel}
-        onPrevious={() => go(step - 1)}
-        onNext={() => go(step + 1)}
-        onReset={reset}
+        onPrevious={() => port.setStep(step - 1)}
+        onNext={() => port.setStep(step + 1)}
+        onReset={() => port.reset()}
       />
     </main>
   );
@@ -253,7 +199,7 @@ function inspectorFor(
   if (view.phase === "confirmed" || view.phase === "journey") {
     return {
       ...inspector,
-      relay: `Simulated confirmation for ${view.windowLabel}. Not received from Agent Relay.`,
+      relay: `Development adapter confirmation for ${view.windowLabel}. Not an Agent Relay message.`,
       statusLabel: "confirmed",
       checkpoint: "booked",
     };
@@ -261,7 +207,7 @@ function inspectorFor(
   if (view.phase === "counteroffer") {
     return {
       ...inspector,
-      relay: `Simulated counteroffer for ${view.windowLabel}. Not confirmed. Not received from Agent Relay.`,
+      relay: `Development adapter counteroffer for ${view.windowLabel}. Not confirmed. Not an Agent Relay message.`,
       statusLabel: "counteroffer_pending_homeowner",
       checkpoint: "counteroffer",
     };
