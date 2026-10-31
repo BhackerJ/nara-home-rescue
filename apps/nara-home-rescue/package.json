@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test src/demo/appointment.test.ts"
+    "test": "node --test src/demo/appointment.test.ts src/demo/caseStore.test.ts"
   },
   "dependencies": {
     "next": "16.3.1",

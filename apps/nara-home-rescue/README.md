@@ -20,7 +20,7 @@ Live mode needs the backend from `docs/runbook.md`: actors (:7100), relay (:8787
 
 The live run: **Report a problem** (homeowner pane) or **New case** (header) → `POST /api/cases`. The page polls the newest case every 300 ms. The assessment streams in; the slot cards follow the Relay negotiation; at `slot_accepted` the shop pane shows **Confirm** → `POST /api/provider/confirm`.
 
-`mock` is the latest presenter UI: http://localhost:3000/?mode=mock or `NEXT_PUBLIC_NARA_DATA_SOURCE=mock`. Previous, Next, Reset, and the arrow keys move one screen. They do not confirm, reject, or reschedule. The homeowner phone and the Nara Capacity dashboard share one simulated appointment (`src/demo/appointment.ts`):
+`mock` is the presenter UI: http://localhost:3000/?mode=mock or `NEXT_PUBLIC_NARA_DATA_SOURCE=mock`. On this machine, `/` uses it whenever port 3100 is down. Previous, Next, Reset, and the arrow keys move one screen. They do not confirm, reject, or reschedule. Both panes share one case in the development adapter (`src/demo/caseStore.ts`), saved in this browser only. That store is not the ServiceCase actor. Live mode still reads the actor through `src/data/live.ts`. The homeowner phone and the Nara Capacity dashboard use that same case:
 
 - Home Twin with structured service history
 - Preliminary assessment and technician recommendations
@@ -31,6 +31,8 @@ The live run: **Report a problem** (homeowner pane) or **New case** (header) →
 - Reset clears the simulated case only. It does not delete a backend booking.
 
 `npm test` runs the appointment regression tests.
+
+The swap point for Brad's actor is `CasePort` in `src/data/casePort.ts`. The presenter uses `developmentCasePort`. Homeowner and shop components do not import it. See `INTEGRATION.md`. Cross-browser sync against the actor has not been run.
 
 ## Case
 

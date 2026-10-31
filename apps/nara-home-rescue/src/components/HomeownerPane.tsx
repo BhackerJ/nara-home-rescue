@@ -94,6 +94,7 @@ function Screen({
     return (
       <CounterofferScreen
         tech={tech}
+        requestedName={rosterTech(roster, view.requestedTechnicianId)?.name ?? null}
         windowLabel={windowLabel}
         reason={view.reason}
         onAccept={onAccept}
@@ -384,7 +385,7 @@ function AuthorizedScreen({ tech, windowLabel }: { tech: RosterTech; windowLabel
         Request submitted
       </p>
       <h1 className="nara-serif animate-rise mt-3 text-[32px] leading-tight font-medium">
-        Waiting for Cool Air to confirm {first}.
+        Waiting for Cool Air Mechanical to confirm {first}.
       </h1>
       <div className="animate-rise delay-1 mt-6 flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -405,25 +406,31 @@ function AuthorizedScreen({ tech, windowLabel }: { tech: RosterTech; windowLabel
 
 function CounterofferScreen({
   tech,
+  requestedName,
   windowLabel,
   reason,
   onAccept,
   onDecline,
 }: {
   tech: RosterTech;
+  requestedName: string | null;
   windowLabel: string;
   reason: string | null;
   onAccept: () => void;
   onDecline: () => void;
 }) {
   const first = firstName(tech);
+  const requestedFirst = requestedName?.split(" ")[0] ?? null;
+  const differentTechnician = requestedName !== null && requestedName !== tech.name;
   return (
     <Phone>
       <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">
         {tech.company}
       </p>
       <h1 className="nara-serif animate-rise mt-4 text-[32px] leading-tight font-medium">
-        {tech.name} can take this visit.
+        {differentTechnician
+          ? `${requestedFirst} is unavailable. Cool Air can send ${tech.name}, ${windowLabel}.`
+          : `${tech.name} can take this visit at ${windowLabel}.`}
       </h1>
       <p className="mt-4 text-[16px] font-semibold text-sage-deep">{windowLabel}</p>
       {reason ? <p className="mt-3 text-[15px] leading-relaxed text-ink/80">{reason}</p> : null}
@@ -442,7 +449,7 @@ function CounterofferScreen({
         onClick={onDecline}
         className="mt-3 text-[14px] font-medium text-sage-deep underline decoration-sage/30 underline-offset-4"
       >
-        See other options
+        Decline
       </button>
     </Phone>
   );
@@ -459,9 +466,9 @@ function ConfirmedScreen({ tech, windowLabel }: { tech: RosterTech | null; windo
           Appointment confirmed
         </span>
         <p className="mt-3 text-[16px] font-semibold text-ink">
-          {first} from {tech?.company ?? "Cool Air Mechanical"}
+          {person} · {windowLabel}
         </p>
-        <p className="mt-1 text-[14px] text-sage-deep">{windowLabel}</p>
+        <p className="mt-1 text-[14px] text-sage-deep">{first} from {tech?.company ?? "Cool Air Mechanical"}</p>
         <p className="mt-3 text-[14px] leading-relaxed text-muted">
           We’ve shared your equipment information and issue summary with {first} so they can
           arrive prepared.

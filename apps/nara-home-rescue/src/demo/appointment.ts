@@ -193,6 +193,8 @@ export type AppointmentView = {
   reason: string | null;
   /** True only when this view tells the homeowner the requested slot was refused. */
   unavailable: boolean;
+  /** Homeowner's original choice. A counteroffer does not replace this. */
+  requestedTechnicianId: AppointmentTechnicianId | null;
 };
 
 const STORY_STEPS = new Set(["twin", "report", "context", "assessment", "matching"]);
@@ -206,6 +208,7 @@ export function describeAppointment(stepId: string, appointment: AppointmentCase
     windowLabel: null,
     reason: null,
     unavailable: false,
+    requestedTechnicianId: null,
   } as const;
 
   if (STORY_STEPS.has(stepId)) return { phase: "story", ...blank };
@@ -219,6 +222,7 @@ export function describeAppointment(stepId: string, appointment: AppointmentCase
       windowLabel: slot?.label ?? null,
       reason: null,
       unavailable: false,
+      requestedTechnicianId: appointment.requestedTechnicianId,
     };
   }
 
@@ -234,6 +238,7 @@ export function describeAppointment(stepId: string, appointment: AppointmentCase
       windowLabel: slot?.label ?? null,
       reason: appointment.proposedReason,
       unavailable: false,
+      requestedTechnicianId: appointment.requestedTechnicianId,
     };
   }
 
@@ -245,6 +250,7 @@ export function describeAppointment(stepId: string, appointment: AppointmentCase
     windowLabel: requested?.label ?? null,
     reason: null,
     unavailable: false,
+    requestedTechnicianId: appointment.requestedTechnicianId,
   };
 }
 
