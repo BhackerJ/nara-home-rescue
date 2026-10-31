@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ActivityEvent, AgentName, CaseStatus, HistoryEntry } from "@/contracts/case";
-import { BASE_HISTORY, STAGES, type DemoFrame, type StageId } from "@/demo/script";
+import { BASE_HISTORY, STAGES, type DemoFrame, type StageId } from "@/demo/liveFrame";
 
 /**
  * Live read model. `/api/*` is proxied to apps/dispatch-frontend (:3100),
