@@ -11,7 +11,7 @@ const AGENT_LABEL = {
   relay: "Agent Relay",
 } as const;
 
-export function ActivityPane({ frame }: { frame: DemoFrame }) {
+export function ActivityPane({ frame, banner }: { frame: DemoFrame; banner?: string }) {
   const [open, setOpen] = useState(true);
 
   return (
@@ -34,17 +34,18 @@ export function ActivityPane({ frame }: { frame: DemoFrame }) {
           <div className="border-b border-line/80 px-4 py-3">
             {frame.live ? (
               <>
-                <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-sage-deep">
-                  Live
+                <p className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-sage-deep">
+                  <span aria-hidden className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-sage" />
+                  Live · polling the case every 300 ms
                 </p>
-                <p className="mt-1 text-[15px] leading-snug text-ink/80">
-                  Every row is a real event. The tags say what produced it:
+                {banner ? (
+                  <p className="mt-2 rounded-xl bg-ink px-3 py-2 text-[16px] font-bold leading-snug text-cream">
+                    ▶ {banner}
+                  </p>
+                ) : null}
+                <p className="mt-1 text-[14px] leading-snug text-ink/70">
+                  Real events from the case. Nothing here is scripted.
                 </p>
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {["OpenAI", "Agent Relay", "Durable Actors", "Supabase"].map((name) => (
-                    <Tag key={name} tag={name} />
-                  ))}
-                </ul>
               </>
             ) : (
               <>
@@ -61,7 +62,7 @@ export function ActivityPane({ frame }: { frame: DemoFrame }) {
             </p>
           </div>
           <ol className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
-            {frame.events.map((event) => (
+            {[...frame.events].reverse().map((event) => (
               <li key={event.id} className="rise rounded-2xl bg-paper px-3 py-2 ring-1 ring-line/70">
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="text-[13px] font-semibold text-sage-deep">{AGENT_LABEL[event.agent]}</p>
@@ -70,7 +71,7 @@ export function ActivityPane({ frame }: { frame: DemoFrame }) {
                 <p className="text-[15px] font-semibold">{event.title}</p>
                 <p className="text-[14px] leading-snug text-ink/75">{event.detail}</p>
                 {event.tags?.length ? (
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                  <ul className="mt-1.5 flex flex-wrap gap-1">
                     {event.tags.map((tag) => (
                       <Tag key={tag} tag={tag} />
                     ))}
@@ -89,26 +90,14 @@ export function ActivityPane({ frame }: { frame: DemoFrame }) {
   );
 }
 
-/** Scoring points, loud on purpose: the sponsor or model name in bold, then what it did. */
-const TAG_STYLE: [prefix: string, className: string][] = [
-  ["caught up", "bg-gold text-ink ring-2 ring-ink/70"],
-  ["OpenAI", "bg-gold text-ink"],
-  ["Agent Relay", "bg-ink text-cream"],
-  ["Durable Actors", "bg-sage text-cream"],
-  ["checkpoint", "bg-sage text-cream"],
-  ["Supabase", "bg-sage-deep text-cream"],
-];
-
+/** One line of small text per row, no background: the system or model that produced it. */
 function Tag({ tag }: { tag: string }) {
-  const style = TAG_STYLE.find(([prefix]) => tag.startsWith(prefix))?.[1] ?? "bg-line text-ink";
-  const [head, ...rest] = tag.split(" · ");
-  // "checkpoint X · Durable Actors" reads better with the system first.
-  const [name, detail] =
-    head.startsWith("checkpoint") ? ["Durable Actors", head] : [head, rest.join(" · ")];
+  const [name, ...rest] = tag.split(" · ");
+  const detail = rest.join(" · ");
   return (
-    <li className={`rounded-full px-2.5 py-1 text-[13px] leading-tight ${style}`}>
-      <strong className="font-bold">{name}</strong>
-      {detail ? <span className="font-medium"> · {detail}</span> : null}
+    <li className="text-[12px] leading-tight text-muted">
+      <span className="font-semibold text-sage-deep">{name}</span>
+      {detail ? <span> · {detail}</span> : null}
     </li>
   );
 }

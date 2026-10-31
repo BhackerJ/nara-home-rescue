@@ -19,14 +19,13 @@ import {
   replayCase,
   useDirector,
   useLiveCase,
-  useRevealed,
   useTypewriter,
   visibleEventCount,
 } from "@/data/live";
 import { LiveRescueDemo } from "./LiveRescueDemo";
 import { ActivityPane as LiveActivityPane } from "./live/ActivityPane";
 import type { TechId } from "@/demo/roster";
-import { clampStep, frameAt, STEPS, type InspectorSnapshot } from "@/demo/script";
+import { clampStep, frameAt, STEPS, type InspectorSnapshot, type StepId } from "@/demo/script";
 import { DispatchApp } from "@/capacity/dispatch/DispatchApp";
 import { ActivityPane } from "./ActivityPane";
 import { HomeownerPane } from "./HomeownerPane";
@@ -37,6 +36,24 @@ import { HomeownerPane } from "./HomeownerPane";
  * Next, Previous, and the arrow keys never confirm, reject, or reschedule.
  * Reset clears this simulated case. It does not call a backend delete.
  */
+/** How many of the case's visible events each screen shows (order: diagnosed, slot_request,
+ *  reject, accept, recovery, confirm, booking, home_updated). */
+const REVEALED_BY_STEP: Record<StepId, number> = {
+  twin: 0,
+  report: 0,
+  context: 0,
+  assessment: 1,
+  matching: 1,
+  authorized: 2,
+  availability: 3,
+  counteroffer: 4,
+  checkpoint: 5,
+  confirmed: 8,
+  enroute: 8,
+  onsite: 8,
+  complete: 8,
+};
+
 export function RescueDemo({ mode }: { mode: DataMode }) {
   const [step, setStep] = useState(0);
   const [techId, setTechId] = useState<TechId>("alex");
@@ -47,15 +64,17 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
   const last = STEPS.length - 1;
 
   // The live case runs beside the presenter: Play demo drives the backend (director on :7300);
-  // the screens are still turned by hand. The agent log and the LLM text come from the case.
+  // the screens are turned by hand. The agent log follows the screens: each one reveals the
+  // real events up to its point in the story, and an event the backend has not produced yet
+  // appears as soon as it does.
   const { current, reachable } = useLiveCase();
-  const reopened = !!current && current.checkpoint !== "created" && current.checkpoint !== "diagnosed";
-  const { revealed, instant } = useRevealed(current?.id ?? "", visibleEventCount(current), reopened);
-  const rawLive = frameFromCase(current ? replayCase(current, revealed) : null, reachable);
-  const { shown, typing } = useTypewriter(rawLive.live?.assessment ?? "", rawLive.caseId, instant);
-  const liveFrame = rawLive.live
-    ? { ...rawLive, live: { ...rawLive.live, assessment: shown || undefined, typing } }
-    : rawLive;
+  const revealed = Math.min(REVEALED_BY_STEP[STEPS[step].id], visibleEventCount(current));
+  const liveFrame = frameFromCase(current ? replayCase(current, revealed) : null, reachable);
+  // The LLM text is not gated by the screens: the diagnosis and the dispatcher's reason come
+  // from the whole case as soon as the model has answered.
+  const fullLive = frameFromCase(current, reachable).live;
+  const { shown, typing } = useTypewriter(fullLive?.assessment ?? "", current?.id ?? "", false);
+  const liveBits = fullLive ? { ...fullLive, assessment: shown || undefined, typing } : undefined;
   const director = useDirector();
 
   function go(next: number) {
@@ -171,7 +190,7 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
         <HomeownerPane
           frame={frame}
           view={view}
-          live={liveFrame.live}
+          live={liveBits}
           onReport={() => go(1)}
           onRequest={requestTechnician}
           onAccept={acceptCounteroffer}
@@ -195,7 +214,7 @@ export function RescueDemo({ mode }: { mode: DataMode }) {
           />
         </section>
         {liveFrame.events.length > 0 ? (
-          <LiveActivityPane frame={liveFrame} />
+          <LiveActivityPane frame={liveFrame} banner={director?.running ? director.step : undefined} />
         ) : (
           <ActivityPane frame={{ ...frame, inspector: inspectorFor(frame.inspector, view, appointment) }} />
         )}

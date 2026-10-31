@@ -131,7 +131,7 @@ export function useRevealed(
   caseId: string,
   total: number,
   reopened: boolean,
-  intervalMs = 4000,
+  intervalMs = 3000,
 ): { revealed: number; instant: boolean } {
   const [progress, setProgress] = useState({ caseId: "", count: 0, instant: false });
   const known = progress.caseId === caseId;
@@ -425,57 +425,59 @@ const MESSAGE_TITLE: Record<string, string> = {
   confirm: "Appointment confirmed",
 };
 
-const LLM = "OpenAI · LLM decision";
+const LLM = "OpenAI";
 const ACTORS = "Durable Actors";
 const RELAY = "Agent Relay";
 
+// One tag per row: the system or model that produced it. The checkpoint the actor
+// persisted after a step is in `next` (step_completed) and is deliberately not shown.
 function activityRow(event: CaseEvent, next?: CaseEvent): ActivityEvent[] {
+  void next;
   const p = event.payload;
   const base = { id: event.id, clock: clock(event.timestamp), simulated: false as const };
-  // The step_completed that follows a step is the checkpoint the actor persisted for it.
-  const checkpoint = next?.type === "step_completed" ? [`checkpoint ${String(next.payload.step)} · ${ACTORS}`] : [];
-  const row = (agent: AgentName, title: string, detail: string, tags: string[]): ActivityEvent[] => [
-    { ...base, agent, title, detail, tags: [...tags, ...checkpoint] },
+  const row = (agent: AgentName, title: string, detail: string, tag?: string): ActivityEvent[] => [
+    { ...base, agent, title, detail, tags: tag ? [tag] : [] },
   ];
 
   switch (event.type) {
     case "diagnosed":
-      return row("diagnostic", "Assessment written", truncate(String(p.narrative ?? ""), 160), [
-        `${LLM} · read the Home Twin`,
-      ]);
+      return row("diagnostic", "Assessment written", truncate(String(p.narrative ?? ""), 160), `${LLM} · read the Home Twin`);
     case "agent_message": {
       const kind = String(p.kind ?? "");
       const agent: AgentName = p.from === "provider" ? "provider" : "dispatch";
       const body = parseBody(p.body);
-      const tags = [RELAY];
-      if (kind === "reject" && body.technician) tags.push(`${LLM} · technician match`);
-      if (kind === "accept" && nonEmpty(body.reason)) tags.push(`${LLM} · slot choice`);
-      if (p.backfilled) tags.push("caught up from Relay after restart");
-      return row(agent, MESSAGE_TITLE[kind] ?? kind, messageText(kind, p.body), tags);
+      const tag = p.backfilled
+        ? "caught up from Relay after restart"
+        : kind === "reject" && body.technician
+          ? `${LLM} · technician match`
+          : kind === "accept" && nonEmpty(body.reason)
+            ? `${LLM} · slot choice`
+            : RELAY;
+      return row(agent, MESSAGE_TITLE[kind] ?? kind, messageText(kind, p.body), tag);
     }
     case "recovery_started":
       return row(
         "actor",
         "Coordinator came back",
         `pid ${String(p.previousPid)} → pid ${String(p.pid)} · resumed from ${String(p.fromCheckpoint)} · nothing redone`,
-        [`${ACTORS} · state survived SIGKILL`, `${RELAY} · missed messages replayed`],
+        `${ACTORS} · survived SIGKILL`,
       );
     case "booking":
       return row(
         "provider",
         p.reused ? "Booking reused" : "Slot booked",
         `${String(p.slot)}${p.technician ? ` · ${String(p.technician)}` : ""} · key ${String(p.idempotencyKey)}`,
-        [`${ACTORS} · idempotent booking`],
+        `${ACTORS} · idempotent booking`,
       );
     case "home_updated":
       return row(
         "actor",
         "Home Twin updated",
         String((p.historyEntry as { summary?: string } | undefined)?.summary ?? "Scheduled visit saved on this home."),
-        p.storedInSupabase ? ["Supabase · service_history"] : [],
+        p.storedInSupabase ? "Supabase · service_history" : undefined,
       );
     case "error":
-      return row("actor", "Error", String(p.message ?? ""), []);
+      return row("actor", "Error", String(p.message ?? ""));
     default:
       return [];
   }

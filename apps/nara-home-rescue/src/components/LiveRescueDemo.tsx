@@ -110,6 +110,7 @@ function LiveDemo() {
       }
       onReport={report}
       onConfirm={confirm}
+      banner={director?.running ? director.step : undefined}
     />
   );
 }
@@ -125,12 +126,14 @@ function Shell({
   action,
   onReport,
   onConfirm,
+  banner,
 }: {
   frame: DemoFrame;
   eyebrow: string;
   action: ReactNode;
   onReport?: () => void;
   onConfirm?: () => void;
+  banner?: string;
 }) {
   return (
     <main className="flex h-dvh flex-col bg-sand px-4 py-3 text-ink">
@@ -162,7 +165,7 @@ function Shell({
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 min-[1100px]:grid-cols-[340px_minmax(0,1fr)_280px]">
         <HomeownerPane frame={frame} onReport={onReport} />
         <ShopPane frame={frame} onConfirm={onConfirm} />
-        <ActivityPane frame={frame} />
+        <ActivityPane frame={frame} banner={banner} />
       </div>
     </main>
   );
