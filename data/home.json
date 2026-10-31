@@ -1,0 +1,20 @@
+{
+  "id": "home-demo-palo-alto",
+  "label": "Demo Home · Palo Alto",
+  "address": "1847 Maple St",
+  "city": "Palo Alto",
+  "state": "CA",
+  "equipment": [
+    {
+      "id": "eq-carrier-24abc6",
+      "type": "Central AC condenser",
+      "brand": "Carrier",
+      "model": "24ABC636A003",
+      "installedYear": 2014
+    }
+  ],
+  "history": [
+    { "date": "2023-07-14", "summary": "Run capacitor replaced on outdoor unit (45/5 µF)" },
+    { "date": "2025-04-02", "summary": "Spring maintenance: coil cleaned, refrigerant charge checked" }
+  ]
+}

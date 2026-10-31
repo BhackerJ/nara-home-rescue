@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "22.x"
   },
   "dependencies": {
     "@agent-relay/sdk": "14.0.0",
@@ -18,7 +18,7 @@
   "scripts": {
     "actors": "cd actors && durable-actors dev --no-watch",
     "actors:generate": "durable-actors generate --out-dir generated/actors",
-    "relay": "RELAYCAST_DB_PATH=relay/relaycast.db relaycast-engine",
+    "relay": "node -e \"if(!process.version.startsWith('v22.')){console.error('relay engine needs Node 22: better-sqlite3 11 crashes on Node 24. Run: nvm use');process.exit(1)}\" && RELAYCAST_DB_PATH=relay/relaycast.db RELAYCAST_MAILBOX_TTL_MS=60000 RELAYCAST_MAILBOX_DEPTH_CAP=20 relaycast-engine",
     "smoke:actors": "node scripts/smoke-actors.mjs",
     "smoke:relay": "node scripts/smoke-relay.mjs"
   }

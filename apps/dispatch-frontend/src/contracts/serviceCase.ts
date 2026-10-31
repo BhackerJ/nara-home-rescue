@@ -2,8 +2,7 @@
  * Read models for the HVAC dispatch dashboard.
  *
  * These match the ServiceCase vocabulary in docs/prd.txt.
- * Nothing in this folder calls the actor, Relay, or a provider API.
- * `loadDispatchDashboard()` still returns local fixtures.
+ * `GET /api/cases/:id` returns `ServiceCase` (docs/plan-1h.md §3).
  */
 
 export type CaseStatus =
@@ -91,4 +90,8 @@ export type ServiceCase = {
   jobPacket: JobPacket;
   counteroffer: ProviderCounteroffer | null;
   confirmedAppointment: ConfirmedAppointment | null;
+  /** Streams while status === "diagnosing" (docs/plan-1h.md §3). */
+  draftDiagnosis?: string;
+  worker?: { bootId: string; pid: number };
+  recovery?: { previousPid: number; pid: number; fromCheckpoint: string; at: string };
 };

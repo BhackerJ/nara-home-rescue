@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { loadDispatchDashboard } from "@/data/dispatchGateway";
+import type { ServiceCase } from "@/contracts/serviceCase";
+import {
+  confirmProviderBooking,
+  loadDispatchDashboard,
+  useLiveServiceCase,
+} from "@/data/dispatchGateway";
 import {
   skillLabel,
   type PublishedOpening,
@@ -44,6 +49,7 @@ export function DispatchApp() {
   const [previewTechId, setPreviewTechId] = useState<string | null>(null);
   const [editTechId, setEditTechId] = useState<string | null>(null);
   const [suggestReason, setSuggestReason] = useState("schedule");
+  const live = useLiveServiceCase();
 
   const matches = matchTechnicians(SERVICE_REQUEST, roster);
   const available = matches.filter(
@@ -112,6 +118,9 @@ export function DispatchApp() {
   function confirm(techId: string) {
     bookSlot(techId);
     setFlow({ step: "confirmed", techId });
+    if (live) {
+      confirmProviderBooking(live.id).catch((error) => console.error(error));
+    }
     const tech = roster.find((item) => item.id === techId);
     if (tech) {
       setAssignment({
@@ -161,7 +170,7 @@ export function DispatchApp() {
             roster={roster}
             onEdit={(id) => setEditTechId(id)}
           />
-          <RequestSection />
+          <RequestSection live={live} />
           <MatchingSection
             available={available}
             recommended={recommended}
@@ -430,13 +439,15 @@ function TechniciansSection({
   );
 }
 
-function RequestSection() {
+function RequestSection({ live }: { live: ServiceCase | null }) {
   const [inbound, setInbound] = useState<DemoInboundRequest | null>(null);
   useEffect(() => {
     // sessionStorage is only available after mount
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setInbound(getDemoInbound());
   }, []);
+
+  if (live) return <LiveRequestCard live={live} />;
 
   if (inbound) {
     return (
@@ -551,6 +562,72 @@ function RequestSection() {
           />
         ))}
       </div>
+    </section>
+  );
+}
+
+function LiveRequestCard({ live }: { live: ServiceCase }) {
+  const diagnosing = live.status === "created" || live.status === "diagnosing";
+  const diagnosis = diagnosing
+    ? live.draftDiagnosis
+    : (live.diagnostic?.narrative ?? live.draftDiagnosis);
+  const equipment = live.equipment;
+
+  return (
+    <section className="rounded-[24px] bg-cream p-5 ring-1 ring-sage/35">
+      <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-sage-deep">
+        Live Nara request · {live.id}
+      </p>
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <h2 className="nara-serif text-[26px] leading-tight">Just arrived from the homeowner</h2>
+        <span className="rounded-full bg-sage-soft px-3 py-1 text-[14px] font-semibold text-sage-deep">
+          {live.status.replaceAll("_", " ")}
+        </span>
+      </div>
+      <p className="nara-serif mt-4 text-[28px]">{live.issue}</p>
+      {equipment ? (
+        <>
+          <p className="mt-1 text-[18px] text-ink/70">
+            {equipment.city}, {equipment.state}
+          </p>
+          <p className="mt-3 text-[18px] font-medium text-ink">
+            {equipment.manufacturer} {equipment.model}
+          </p>
+          <p className="text-[16px] text-muted">
+            {equipment.equipmentType} · Manufactured {equipment.year}
+          </p>
+        </>
+      ) : null}
+
+      <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
+        What Nara learned
+      </p>
+      <ul className="mt-2 space-y-1.5 text-[18px] text-ink/85">
+        {live.symptoms.map((symptom) => (
+          <li key={symptom}>✓ {symptom}</li>
+        ))}
+      </ul>
+
+      <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
+        Diagnosis
+      </p>
+      <p className="mt-2 whitespace-pre-wrap text-[18px] leading-relaxed text-ink/85">
+        {diagnosis || "Diagnosing…"}
+      </p>
+
+      {live.jobPacket?.photoUrls.length ? (
+        <div className="mt-4 flex gap-2">
+          {live.jobPacket.photoUrls.map((src) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={src}
+              src={src}
+              alt=""
+              className="h-20 w-20 rounded-xl object-cover ring-1 ring-line"
+            />
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }

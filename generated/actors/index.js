@@ -14,17 +14,18 @@ export {
 /**
  * Call actor methods from your backend.
  * @example
- * const actor = actors.Smoke.get("actor-id")
+ * const actor = actors.CaseIndex.get("actor-id")
  */
 export const actors = {
-    ["Smoke"]: {
+    ["CaseIndex"]: {
         get(actorId, transport) {
             return $createActorStub(
-                "Smoke",
+                "CaseIndex",
                 actorId,
                 [
-                    { name: "bump", result: "value" },
-                    { name: "read", result: "value" }
+                    { name: "add", result: "void" },
+                    { name: "list", result: "value" },
+                    { name: "remove", result: "void" }
                 ],
                 transport
             )
@@ -32,21 +33,76 @@ export const actors = {
         /**
          * Allow a frontend connection after your backend checks the user's access.
          * @example
-         * const grant = await actors.Smoke.prepareWebsocket({ actorId: "actor-id", metadata })
+         * const grant = await actors.CaseIndex.prepareWebsocket({ actorId: "actor-id", metadata })
          */
         prepareWebsocket(authorization, options = {}, dependencies = {}) {
-            return new ActorProxy(options, dependencies).handle({ ...authorization, actorName: "Smoke" })
+            return new ActorProxy(options, dependencies).handle({ ...authorization, actorName: "CaseIndex" })
+        }
+    },
+    ["ProviderCalendar"]: {
+        get(actorId, transport) {
+            return $createActorStub(
+                "ProviderCalendar",
+                actorId,
+                [
+                    { name: "approve", result: "void" },
+                    { name: "book", result: "value" },
+                    { name: "claim", result: "value" },
+                    { name: "get", result: "value" },
+                    { name: "isApproved", result: "value" },
+                    { name: "markReplied", result: "void" },
+                    { name: "offer", result: "value" },
+                    { name: "reset", result: "void" }
+                ],
+                transport
+            )
+        },
+        /**
+         * Allow a frontend connection after your backend checks the user's access.
+         * @example
+         * const grant = await actors.ProviderCalendar.prepareWebsocket({ actorId: "actor-id", metadata })
+         */
+        prepareWebsocket(authorization, options = {}, dependencies = {}) {
+            return new ActorProxy(options, dependencies).handle({ ...authorization, actorName: "ProviderCalendar" })
+        }
+    },
+    ["ServiceCase"]: {
+        get(actorId, transport) {
+            return $createActorStub(
+                "ServiceCase",
+                actorId,
+                [
+                    { name: "addEvent", result: "void" },
+                    { name: "beginRecovery", result: "value" },
+                    { name: "completeStep", result: "value" },
+                    { name: "create", result: "value" },
+                    { name: "fail", result: "void" },
+                    { name: "get", result: "value" },
+                    { name: "setDraft", result: "void" },
+                    { name: "setWorker", result: "void" },
+                    { name: "stageStep", result: "value" }
+                ],
+                transport
+            )
+        },
+        /**
+         * Allow a frontend connection after your backend checks the user's access.
+         * @example
+         * const grant = await actors.ServiceCase.prepareWebsocket({ actorId: "actor-id", metadata })
+         */
+        prepareWebsocket(authorization, options = {}, dependencies = {}) {
+            return new ActorProxy(options, dependencies).handle({ ...authorization, actorName: "ServiceCase" })
         }
     }
 }
 /**
  * Allow a frontend connection after your backend checks the user's access.
  * @example
- * const grant = await ActorProxy.handle({ actorName: "Smoke", actorId: "actor-id", metadata })
+ * const grant = await ActorProxy.handle({ actorName: "CaseIndex", actorId: "actor-id", metadata })
  */
 export class ActorProxy extends $SocketProxy {
     constructor(options = {}, dependencies = {}) {
-        super({ ["Smoke"]: {} }, options, dependencies)
+        super({ ["CaseIndex"]: {}, ["ProviderCalendar"]: {}, ["ServiceCase"]: {} }, options, dependencies)
     }
     handle(authorization) {
         return super.handle(authorization)

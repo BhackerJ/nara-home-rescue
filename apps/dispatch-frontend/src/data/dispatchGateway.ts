@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ServiceCase } from "@/contracts/serviceCase";
 import { COMPANY, type Company } from "@/data/companies";
 import { SAMPLE_OUTCOMES, type JobOutcome } from "@/data/outcomes";
@@ -18,11 +19,60 @@ export type DispatchDashboardData = {
 };
 
 /**
- * Mock fallback for the dispatch dashboard.
+ * Polls the latest live case: `GET /api/cases` → `{ caseIds }` (latest last),
+ * then `GET /api/cases/:id` (docs/plan-1h.md §3).
  *
- * Replace this function when the ServiceCase actor is available.
- * Do not add a network client here until that API exists.
+ * Returns null until the first case loads, so the screen keeps the fixture.
+ * A failed poll keeps the last case on screen: the backend is expected to
+ * disappear for a few seconds when the coordinator is killed.
  */
+export function useLiveServiceCase(pollMs = 300): ServiceCase | null {
+  const [live, setLive] = useState<ServiceCase | null>(null);
+
+  useEffect(() => {
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    async function poll() {
+      try {
+        const index = await fetch("/api/cases", { cache: "no-store" });
+        if (index.ok) {
+          const { caseIds } = (await index.json()) as { caseIds: string[] };
+          const latest = caseIds.at(-1);
+          if (latest) {
+            const res = await fetch(`/api/cases/${encodeURIComponent(latest)}`, {
+              cache: "no-store",
+            });
+            if (res.ok && !stopped) setLive((await res.json()) as ServiceCase);
+          }
+        }
+      } catch {
+        // Backend down or restarting; keep what is on screen.
+      }
+      if (!stopped) timer = setTimeout(poll, pollMs);
+    }
+
+    poll();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [pollMs]);
+
+  return live;
+}
+
+/** The dashboard CONFIRM button: lets the provider agent book the slot. */
+export async function confirmProviderBooking(caseId: string): Promise<void> {
+  const res = await fetch("/api/provider/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ caseId }),
+  });
+  if (!res.ok) throw new Error(`POST /api/provider/confirm → ${res.status}`);
+}
+
+/** Fixture fallback for the dispatch dashboard. */
 export function loadDispatchDashboard(): DispatchDashboardData {
   return {
     company: COMPANY,

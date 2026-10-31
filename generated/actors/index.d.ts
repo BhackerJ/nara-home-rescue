@@ -23,16 +23,46 @@ export type {
 /**
  * Types for actor state and socket messages.
  * @example
- * type State = actors.Smoke.State
+ * type State = actors.CaseIndex.State
  */
 export declare namespace actors {
-    namespace Smoke {
-        type Metadata = $ActorTypes["Smoke"]["Metadata"]
-        type Incoming = $ActorTypes["Smoke"]["Incoming"]
-        type Outgoing = $ActorTypes["Smoke"]["Outgoing"]
-        type State = $ActorTypes["Smoke"]["State"]
+    namespace CaseIndex {
+        type Metadata = $ActorTypes["CaseIndex"]["Metadata"]
+        type Incoming = $ActorTypes["CaseIndex"]["Incoming"]
+        type Outgoing = $ActorTypes["CaseIndex"]["Outgoing"]
+        type State = $ActorTypes["CaseIndex"]["State"]
         interface Authorization {
-            actorName: "Smoke"
+            actorName: "CaseIndex"
+            actorId: string
+            metadata: Metadata
+            clientLocation?: {
+                latitude: number
+                longitude: number
+            }
+        }
+    }
+    namespace ProviderCalendar {
+        type Metadata = $ActorTypes["ProviderCalendar"]["Metadata"]
+        type Incoming = $ActorTypes["ProviderCalendar"]["Incoming"]
+        type Outgoing = $ActorTypes["ProviderCalendar"]["Outgoing"]
+        type State = $ActorTypes["ProviderCalendar"]["State"]
+        interface Authorization {
+            actorName: "ProviderCalendar"
+            actorId: string
+            metadata: Metadata
+            clientLocation?: {
+                latitude: number
+                longitude: number
+            }
+        }
+    }
+    namespace ServiceCase {
+        type Metadata = $ActorTypes["ServiceCase"]["Metadata"]
+        type Incoming = $ActorTypes["ServiceCase"]["Incoming"]
+        type Outgoing = $ActorTypes["ServiceCase"]["Outgoing"]
+        type State = $ActorTypes["ServiceCase"]["State"]
+        interface Authorization {
+            actorName: "ServiceCase"
             actorId: string
             metadata: Metadata
             clientLocation?: {
@@ -45,36 +75,200 @@ export declare namespace actors {
 /**
  * Types for actor state and methods.
  * @example
- * type State = actors.Smoke.State
+ * type State = actors.CaseIndex.State
  */
 export declare namespace actors {
-    namespace Smoke {
-        type Stub = $ActorTypes["Smoke"]["Methods"]
+    namespace CaseIndex {
+        type Stub = $ActorTypes["CaseIndex"]["Methods"]
         interface $MethodTypes {
-            ["bump"]: {
-                Args: Parameters<Stub["bump"]>
-                Result: Awaited<ReturnType<Stub["bump"]>>
+            ["add"]: {
+                Args: Parameters<Stub["add"]>
+                Result: Awaited<ReturnType<Stub["add"]>>
             }
-            ["read"]: {
-                Args: Parameters<Stub["read"]>
-                Result: Awaited<ReturnType<Stub["read"]>>
+            ["list"]: {
+                Args: Parameters<Stub["list"]>
+                Result: Awaited<ReturnType<Stub["list"]>>
+            }
+            ["remove"]: {
+                Args: Parameters<Stub["remove"]>
+                Result: Awaited<ReturnType<Stub["remove"]>>
             }
         }
         interface Methods extends $MethodTypes {}
         /**
          * Types for a method's arguments and return value.
          * @example
-         * type Args = actors.Smoke.Methods["bump"]["Args"]
-         * type Result = actors.Smoke.Methods["bump"]["Result"]
+         * type Args = actors.CaseIndex.Methods["add"]["Args"]
+         * type Result = actors.CaseIndex.Methods["add"]["Result"]
          */
         namespace Methods {
-            namespace bump {
-                type Args = $MethodTypes["bump"]["Args"]
-                type Result = $MethodTypes["bump"]["Result"]
+            namespace add {
+                type Args = $MethodTypes["add"]["Args"]
+                type Result = $MethodTypes["add"]["Result"]
             }
-            namespace read {
-                type Args = $MethodTypes["read"]["Args"]
-                type Result = $MethodTypes["read"]["Result"]
+            namespace list {
+                type Args = $MethodTypes["list"]["Args"]
+                type Result = $MethodTypes["list"]["Result"]
+            }
+            namespace remove {
+                type Args = $MethodTypes["remove"]["Args"]
+                type Result = $MethodTypes["remove"]["Result"]
+            }
+        }
+    }
+    namespace ProviderCalendar {
+        type Stub = $ActorTypes["ProviderCalendar"]["Methods"]
+        interface $MethodTypes {
+            ["approve"]: {
+                Args: Parameters<Stub["approve"]>
+                Result: Awaited<ReturnType<Stub["approve"]>>
+            }
+            ["book"]: {
+                Args: Parameters<Stub["book"]>
+                Result: Awaited<ReturnType<Stub["book"]>>
+            }
+            ["claim"]: {
+                Args: Parameters<Stub["claim"]>
+                Result: Awaited<ReturnType<Stub["claim"]>>
+            }
+            ["get"]: {
+                Args: Parameters<Stub["get"]>
+                Result: Awaited<ReturnType<Stub["get"]>>
+            }
+            ["isApproved"]: {
+                Args: Parameters<Stub["isApproved"]>
+                Result: Awaited<ReturnType<Stub["isApproved"]>>
+            }
+            ["markReplied"]: {
+                Args: Parameters<Stub["markReplied"]>
+                Result: Awaited<ReturnType<Stub["markReplied"]>>
+            }
+            ["offer"]: {
+                Args: Parameters<Stub["offer"]>
+                Result: Awaited<ReturnType<Stub["offer"]>>
+            }
+            ["reset"]: {
+                Args: Parameters<Stub["reset"]>
+                Result: Awaited<ReturnType<Stub["reset"]>>
+            }
+        }
+        interface Methods extends $MethodTypes {}
+        /**
+         * Types for a method's arguments and return value.
+         * @example
+         * type Args = actors.ProviderCalendar.Methods["approve"]["Args"]
+         * type Result = actors.ProviderCalendar.Methods["approve"]["Result"]
+         */
+        namespace Methods {
+            namespace approve {
+                type Args = $MethodTypes["approve"]["Args"]
+                type Result = $MethodTypes["approve"]["Result"]
+            }
+            namespace book {
+                type Args = $MethodTypes["book"]["Args"]
+                type Result = $MethodTypes["book"]["Result"]
+            }
+            namespace claim {
+                type Args = $MethodTypes["claim"]["Args"]
+                type Result = $MethodTypes["claim"]["Result"]
+            }
+            namespace isApproved {
+                type Args = $MethodTypes["isApproved"]["Args"]
+                type Result = $MethodTypes["isApproved"]["Result"]
+            }
+            namespace markReplied {
+                type Args = $MethodTypes["markReplied"]["Args"]
+                type Result = $MethodTypes["markReplied"]["Result"]
+            }
+            namespace offer {
+                type Args = $MethodTypes["offer"]["Args"]
+                type Result = $MethodTypes["offer"]["Result"]
+            }
+            namespace reset {
+                type Args = $MethodTypes["reset"]["Args"]
+                type Result = $MethodTypes["reset"]["Result"]
+            }
+        }
+    }
+    namespace ServiceCase {
+        type Stub = $ActorTypes["ServiceCase"]["Methods"]
+        interface $MethodTypes {
+            ["addEvent"]: {
+                Args: Parameters<Stub["addEvent"]>
+                Result: Awaited<ReturnType<Stub["addEvent"]>>
+            }
+            ["beginRecovery"]: {
+                Args: Parameters<Stub["beginRecovery"]>
+                Result: Awaited<ReturnType<Stub["beginRecovery"]>>
+            }
+            ["completeStep"]: {
+                Args: Parameters<Stub["completeStep"]>
+                Result: Awaited<ReturnType<Stub["completeStep"]>>
+            }
+            ["create"]: {
+                Args: Parameters<Stub["create"]>
+                Result: Awaited<ReturnType<Stub["create"]>>
+            }
+            ["fail"]: {
+                Args: Parameters<Stub["fail"]>
+                Result: Awaited<ReturnType<Stub["fail"]>>
+            }
+            ["get"]: {
+                Args: Parameters<Stub["get"]>
+                Result: Awaited<ReturnType<Stub["get"]>>
+            }
+            ["setDraft"]: {
+                Args: Parameters<Stub["setDraft"]>
+                Result: Awaited<ReturnType<Stub["setDraft"]>>
+            }
+            ["setWorker"]: {
+                Args: Parameters<Stub["setWorker"]>
+                Result: Awaited<ReturnType<Stub["setWorker"]>>
+            }
+            ["stageStep"]: {
+                Args: Parameters<Stub["stageStep"]>
+                Result: Awaited<ReturnType<Stub["stageStep"]>>
+            }
+        }
+        interface Methods extends $MethodTypes {}
+        /**
+         * Types for a method's arguments and return value.
+         * @example
+         * type Args = actors.ServiceCase.Methods["addEvent"]["Args"]
+         * type Result = actors.ServiceCase.Methods["addEvent"]["Result"]
+         */
+        namespace Methods {
+            namespace addEvent {
+                type Args = $MethodTypes["addEvent"]["Args"]
+                type Result = $MethodTypes["addEvent"]["Result"]
+            }
+            namespace beginRecovery {
+                type Args = $MethodTypes["beginRecovery"]["Args"]
+                type Result = $MethodTypes["beginRecovery"]["Result"]
+            }
+            namespace completeStep {
+                type Args = $MethodTypes["completeStep"]["Args"]
+                type Result = $MethodTypes["completeStep"]["Result"]
+            }
+            namespace create {
+                type Args = $MethodTypes["create"]["Args"]
+                type Result = $MethodTypes["create"]["Result"]
+            }
+            namespace fail {
+                type Args = $MethodTypes["fail"]["Args"]
+                type Result = $MethodTypes["fail"]["Result"]
+            }
+            namespace setDraft {
+                type Args = $MethodTypes["setDraft"]["Args"]
+                type Result = $MethodTypes["setDraft"]["Result"]
+            }
+            namespace setWorker {
+                type Args = $MethodTypes["setWorker"]["Args"]
+                type Result = $MethodTypes["setWorker"]["Result"]
+            }
+            namespace stageStep {
+                type Args = $MethodTypes["stageStep"]["Args"]
+                type Result = $MethodTypes["stageStep"]["Result"]
             }
         }
     }
@@ -82,18 +276,44 @@ export declare namespace actors {
 /**
  * Call actor methods from your backend.
  * @example
- * const actor = actors.Smoke.get("actor-id")
+ * const actor = actors.CaseIndex.get("actor-id")
  */
 export declare const actors: {
-    Smoke: {
-        get(actorId: string, transport?: import("./runtime/index.js").ActorRpcTransport): actors.Smoke.Stub
+    CaseIndex: {
+        get(actorId: string, transport?: import("./runtime/index.js").ActorRpcTransport): actors.CaseIndex.Stub
         /**
          * Allow a frontend connection after your backend checks the user's access.
          * @example
-         * const grant = await actors.Smoke.prepareWebsocket({ actorId: "actor-id", metadata })
+         * const grant = await actors.CaseIndex.prepareWebsocket({ actorId: "actor-id", metadata })
          */
         prepareWebsocket(
-            authorization: Omit<actors.Smoke.Authorization, "actorName">,
+            authorization: Omit<actors.CaseIndex.Authorization, "actorName">,
+            options?: import("./runtime/index.js").SocketProxyOptions,
+            dependencies?: import("./runtime/index.js").SocketProxyDependencies
+        ): Promise<import("./runtime/index.js").SocketGrant>
+    }
+    ProviderCalendar: {
+        get(actorId: string, transport?: import("./runtime/index.js").ActorRpcTransport): actors.ProviderCalendar.Stub
+        /**
+         * Allow a frontend connection after your backend checks the user's access.
+         * @example
+         * const grant = await actors.ProviderCalendar.prepareWebsocket({ actorId: "actor-id", metadata })
+         */
+        prepareWebsocket(
+            authorization: Omit<actors.ProviderCalendar.Authorization, "actorName">,
+            options?: import("./runtime/index.js").SocketProxyOptions,
+            dependencies?: import("./runtime/index.js").SocketProxyDependencies
+        ): Promise<import("./runtime/index.js").SocketGrant>
+    }
+    ServiceCase: {
+        get(actorId: string, transport?: import("./runtime/index.js").ActorRpcTransport): actors.ServiceCase.Stub
+        /**
+         * Allow a frontend connection after your backend checks the user's access.
+         * @example
+         * const grant = await actors.ServiceCase.prepareWebsocket({ actorId: "actor-id", metadata })
+         */
+        prepareWebsocket(
+            authorization: Omit<actors.ServiceCase.Authorization, "actorName">,
             options?: import("./runtime/index.js").SocketProxyOptions,
             dependencies?: import("./runtime/index.js").SocketProxyDependencies
         ): Promise<import("./runtime/index.js").SocketGrant>
@@ -102,16 +322,19 @@ export declare const actors: {
 /**
  * The actor and connection details approved by your backend.
  * @example
- * const authorization: ActorAuthorization = { actorName: "Smoke", actorId: "actor-id", metadata }
+ * const authorization: ActorAuthorization = { actorName: "CaseIndex", actorId: "actor-id", metadata }
  */
-export type ActorAuthorization = actors.Smoke.Authorization
+export type ActorAuthorization =
+    actors.CaseIndex.Authorization | actors.ProviderCalendar.Authorization | actors.ServiceCase.Authorization
 /**
  * Allow a frontend connection after your backend checks the user's access.
  * @example
- * const grant = await ActorProxy.handle({ actorName: "Smoke", actorId: "actor-id", metadata })
+ * const grant = await ActorProxy.handle({ actorName: "CaseIndex", actorId: "actor-id", metadata })
  */
 export declare class ActorProxy extends $SocketProxy<{
-    ["Smoke"]: import("./runtime/index.js").ProxyActor<actors.Smoke.Metadata>
+    ["CaseIndex"]: import("./runtime/index.js").ProxyActor<actors.CaseIndex.Metadata>
+    ["ProviderCalendar"]: import("./runtime/index.js").ProxyActor<actors.ProviderCalendar.Metadata>
+    ["ServiceCase"]: import("./runtime/index.js").ProxyActor<actors.ServiceCase.Metadata>
 }> {
     constructor(
         options?: import("./runtime/index.js").SocketProxyOptions,
