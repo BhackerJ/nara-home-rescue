@@ -1,99 +1,69 @@
 # 2-Minute Demo Script: Nara Home Rescue
 
-2026-10-31 · Brad (drafted by Claude) · second draft, after a "can this win first place" review
+2026-10-31 13:05 · Brad and Nagisa (drafted by Claude) · fourth draft, product-led, matches [plan-1h.md](./plan-1h.md)
 
-Theme is "Real-time AI", pitch slot is 2 minutes, tracks are Durable Actors, Agent Relay and Supabase. The story is the one in [plan-onsite.md](./plan-onsite.md) §1. This document fixes what appears on screen in what order, what is said over it, and what the frontend has to show for the words to land.
+The submission is a YouTube video; the Devpost rubric has five criteria at 20% each: Real-Time AI and track technology, Originality, Execution and demo, UX and design, Potential and impact. This draft puts the product first and the crash second, and every sentence below is tagged with the criterion it scores. Facts that the previous drafts assumed and plan-1h cut: there is no pull-the-plug button, checkbox, tombstone, twin highlight or LLM slot pick, and there is no three-column page. Two pages in Nagisa's app on `:3100`: `/home` and `/dispatch`. Brad kills the coordinator in a terminal. Nothing on screen says how long the coordinator was down: the restarted process cannot know when it died, and any number would include the human wait for the CONFIRM click. The proof of the crash is the PID change, in the header and on the recovery card.
 
-This draft assumes four things that the on-site plan does not yet contain; §7 lists them with their cost so they can be cut individually.
+## 1. The shape of the demo
 
-## 1. What first place needs that the first draft didn't have
+The machine finishes diagnosis and the slot negotiation in about five seconds. What gives the video its pacing is a human pause that is also the product's real pause: the provider's booking waits until the shop dispatcher clicks **CONFIRM** on `/dispatch`. That click is the kill moment. Nagisa clicks, and in the same second Brad runs `kill -9` on the coordinator. The provider books and sends its confirmation over Relay while the coordinator is dead; Brad restarts it; it reloads the case from the actor, pulls the confirmation it missed, writes the history entry, and the case goes to `confirmed`. Recorded, not live: the terminal is picture-in-picture, so the judge sees the PID die and a new one appear.
 
-Most teams in the room will demo "agent crashes, agent comes back", because that is what Durable Actors is for. A crash-recovery demo of a mock HVAC booking is correct, but correctness is invisible: the judge sees a booking happen and has to take our word that nothing was duplicated, nothing was redone, and the process really died. Three things separate a top-5 finish from first:
+Two pages, recorded on one screen, switch by tab:
 
-1. **The judge kills it, not a checkbox.** A self-inflicted crash from a form field looks staged. A big red button that a judge presses at a moment of their choosing is the memory they take to the scoring sheet. The design already has `armPlug` ("die right after the next committed step"); the on-site plan cut it because Relay replies in 20 ms. It comes back: the button is lit while the diagnosis streams (a 2–4 second window), and the kill fires right after the slot request leaves. That is the designed crash moment, reached by a judge's hand.
-2. **Proof on screen, not in the narration.** "Exactly one booking" and "it didn't redo the diagnosis" have to be visible: a provider calendar panel that shows one booked slot, and a diagnosis card that keeps its original timestamp through the crash.
-3. **The AI has to look like AI.** Only the diagnosis uses an LLM; the negotiation is templates. We don't have time to change that, so the diagnosis must carry the "real-time AI" theme on its own: it streams, and when it mentions the capacitor, the 2023 history entry in the twin lights up. That is the one moment where the judge sees the agent *use* memory.
+- `/home`: Home Twin on the left; on the right the prefilled report form, which becomes the case timeline after submit: streaming diagnosis, agent messages (`from → to · via Agent Relay`), the recovery card (`pid <old> → pid <new> · resumed from <checkpoint>`, stays on screen), the final confirmation and the new history line. The header shows the live coordinator PID. The provider reply that arrived during the outage is tagged "caught up from Relay after restart" in gold.
+- `/dispatch`: the shop's dashboard, the live case as the job packet (issue, symptoms, equipment, diagnosis narrative), the CONFIRM button.
 
-Plus a cheap one: it's Haunted Hacks. The dead process gets a tombstone with its PID; the recovered one gets "resurrected". Judges remember the team that leaned into the theme.
+## 2. Roles
 
-Honest verdict: with these four, the demo has a judge-participation moment, visible proof and a theme hook, which is what first place usually looks like. Without them it is a strong Durable Actors track entry. The bigger risk to first place is not the script: it is whether the whole thing runs at 16:00 after a five-hour build from zero. Nothing in this document is worth doing if it costs the rehearsal time.
+Nagisa speaks and drives both pages. Brad runs the four terminals (actors, relay, coordinator, provider) and does the kill and restart; his coordinator terminal is the picture-in-picture. If the Supabase timebox in plan-1h §4 passed, the Home Twin is read from Supabase and the script says so once; otherwise it is a fixture and the word Supabase is not spoken.
 
-## 2. The hard part: the machine is faster than the mouth
+## 3. Script
 
-Report to confirmed booking takes about ten seconds of machine time: diagnosis 2–4 s, slot request, kill, 2–4 s of recovery, then four Relay messages at ~15 ms each. No narration keeps up.
+Tags: **AI** real-time AI and track tech · **ORIG** originality · **EXEC** execution and demo · **UX** · **IMPACT**.
 
-So the demo runs twice. **First pass, let it run**, say only a few words, so the judge sees it is fast and the crash is real. **Second pass, rewind on the timeline** and point at each event. This requires that everything the narration points at stays on screen after recovery: the tombstone, both PIDs, the downtime, the caught-up message.
+| Time | Screen | Action | Words | Scores |
+|---|---|---|---|---|
+| 0:00–0:15 | `/home`, Home Twin card | — | "Every home has a history: this one has a 2014 Carrier condenser and a capacitor replaced in 2023. Nara keeps that as a Home Twin. Today the AC stops cooling, and instead of the homeowner calling around, two AI agents handle it, and one of them is going to die halfway through." | IMPACT, ORIG |
+| 0:15–0:35 | `/home`, form then diagnosis | click Submit, let the diagnosis stream | "I file the problem. Watch the diagnosis write itself: the model is reading the twin as it goes, and it names the capacitor, because it knows this unit already had one replaced." *(let 3–4 seconds of streaming play with no words)* "That's the diagnostic agent, live, not a canned answer." | AI, EXEC |
+| 0:35–0:55 | `/dispatch`, job packet | switch tab, point | "This is what the HVAC shop sees. The same case, as a job packet: symptoms, the equipment, the diagnosis. No phone call, no form the dispatcher has to retype. The dispatcher's only job is to say yes." | UX, IMPACT |
+| 0:55–1:15 | `/home`, agent message list | switch back, point at each message | "While we were looking at the shop, the dispatch agent asked the provider's agent for Tuesday 9 AM over Agent Relay. Provider said: taken, here are two others. Dispatch took the first. Two separate processes, and Relay is the only line between them. Now it's waiting on a human." | AI, EXEC |
+| 1:15–1:35 | `/dispatch` CONFIRM, terminal PiP, then `/home` recovery card | Nagisa clicks CONFIRM; Brad `kill -9` the coordinator in the same second; Brad restarts it after ~2 s; switch to `/home` | "The dispatcher confirms, and right now the agent that was running this case is dead. *(terminal: PID gone; header PID stops updating)* The shop's confirmation went out anyway, over Relay, to nobody. *(restart)* A new process comes up, new PID in the header, finds the case in its Durable Actor, picks up the message it missed, in gold here, and finishes. Same case, same diagnosis, no second booking." | AI, ORIG, EXEC |
+| 1:35–1:50 | `/home`, confirmation and new history line | point | "Confirmed for Tuesday 11. And the Home Twin already has today's repair in its history, so the next agent that touches this home knows." *(if Supabase passed: "That twin lives in Supabase.")* | IMPACT, UX |
+| 1:50–2:00 | `/home` | — | "Nara Home Rescue: the home remembers, the agents talk to each other, and the case survives whatever dies in the middle. Durable Actors and Agent Relay, both doing real work." | IMPACT, AI |
 
-## 3. Roles
+About 300 words, roughly 1:55 at a normal pace including the streaming pause. Time it in rehearsal. If it runs long, cut in this order: the second sentence of 0:35, "Two separate processes…" at 0:55, the last sentence of 1:50.
 
-Nagisa speaks, Brad drives and watches the terminal. The backend runs on Brad's Mac, so he is the one who knows fastest whether to cut to the video. (plan-onsite §8 left this open; change it if you've agreed otherwise.)
+## 4. What has to be on screen for the words to land
 
-The judge presses the kill button. If no judge wants to, Nagisa asks Brad to press it; the words don't change.
+Everything the narration points at must exist in the UI; if it is only said, the judge is only listening.
 
-## 4. Script
+1. **Streaming diagnosis is visibly streaming** at 0:15, text growing word by word for at least 3 seconds. This is the only moment that carries the 20% real-time AI line by itself. If the model is too fast to see, add nothing: let the words from 0:15 cover it and point at the capacitor line once it is there.
+2. **Agent messages** show `from → to · via Agent Relay`, and the provider's confirmation that arrived during the outage carries the gold "caught up from Relay after restart" tag.
+3. **Recovery card** on `/home`: `pid <old> → pid <new> · resumed from slot_accepted`, and it stays on screen after the case finishes. No downtime figure anywhere; point at the two PIDs.
+4. **Diagnosis keeps its timestamp** through the restart: same card, not a new one.
+5. **Confirmation and history line** appear on `/home` without a reload (300 ms poll).
+6. **Terminal picture-in-picture** on Brad's coordinator process, big font, so the kill and the new PID are readable in the video.
+7. **Big type** on both pages: body ≥ 18 px, PIDs and slot times one size up.
 
-| Time | Screen | Action | Words |
-|---|---|---|---|
-| 0:00–0:10 | Home Twin | — | "Happy Halloween. Every agent demo you'll see today dies if you kill the process halfway. Ours comes back from the dead, and in a minute one of you will kill it." |
-| 0:10–0:22 | Home Twin: equipment card, two history entries | point at the 2023 capacitor entry | "This is the home's twin, in Supabase: a 2014 Carrier condenser, and a capacitor replaced in 2023. The agents read from it." |
-| 0:22–0:28 | Report form, prefilled | click Submit | "The AC isn't cooling. I'll file it. Watch the diagnosis stream, and when the red button lights up, *you* pull the plug." |
-| 0:28–0:40 | Diagnosis streams → 2023 entry lights up → button lit → judge presses → slot request → tombstone → resurrected → negotiation → booked | judge presses the button | Short phrases only, timed to the screen: "It's reading the twin." / "Now." / "Dead. Both processes." / "Back." / "Booked." |
-| 0:40–1:30 | Case page, top to bottom | scroll and point | the rewind, below |
-| 1:30–1:40 | Home Twin history gains an entry; provider calendar shows one booked slot | point at both | "The twin already has today's repair, and the provider's calendar has exactly one booking." |
-| 1:40–2:00 | Stay on the case page | — | "Durable Actors hold every case and survive a hard kill. Agent Relay carries every message between the two agents, even while one of them is dead. Supabase holds what every case shares. That's Nara Home Rescue." |
+## 5. Recording
 
-**The rewind (0:40–1:30)**, one sentence per thing on screen:
-
-1. "Ten seconds, crash included. Let me rewind."
-2. (diagnosis) "It named the capacitor because it read the twin. Same timestamp as before the crash: it was never redone."
-3. (slot request) "The dispatch agent asked the provider's agent for a slot over Agent Relay. Two processes, and Relay is the only line between them."
-4. (tombstone) "Then you killed it. SIGKILL on the dispatcher *and* on the Durable Actors runtime, right after it sent that message and before it could write down that it had. Worst possible moment. Old PID, new PID, down for *[read the seconds off the screen]*."
-5. (caught-up message) "While it was dead, the provider replied: slot taken. The new dispatcher reloaded the case from the actor's SQLite, caught that reply up from Relay, and kept negotiating."
-6. (booking) "And because every message carries an idempotency key, nothing was sent twice and there is one booking."
-
-About 260 words, roughly 1:45 at a normal pace, 15 seconds for pauses. Time it in rehearsal; if it runs long, drop the second half of sentence 3.
-
-## 5. What the frontend has to show
-
-Every sentence above points at something. If it isn't on screen, the judge is only listening.
-
-1. **One page, three columns**: Home Twin (equipment, history) · case (form, then timeline) · provider calendar (slots, booked one filled). No page switches, and the history entry and the booking appear in front of the judge. The twin column refetches `GET /api/home/:id` on a `home_updated` event; the calendar column polls `GET /api/provider` with the case.
-2. **Prefilled form**: issue, symptoms, preferred slot. One click on stage. The "pull the plug" checkbox stays as the fallback (§6) but is unchecked by default.
-3. **The kill button**: large, red, in the case column. Disabled until the case exists, lit while the case is `diagnosing` or `dispatching`, calls `POST /api/demo/pull-plug`. Label: "PULL THE PLUG". After pressing: "armed — dies after its next message".
-4. **Twin highlight**: while the draft diagnosis streams, if the text contains "capacitor", the 2023 history entry gets a highlight that stays.
-5. **Tombstone, not a banner**: on `plug_pulled`, the case column shows a tombstone card: "RIP coordinator PID 48213 · actors PID 48201", with a running timer. On `recovery_started` the card stays and gains "Resurrected · PID 48390 · actors down 2.3 s · resumed from `slot_requested`". It never disappears.
-6. **Caught-up message tag**: the provider reply that arrived during the outage is tagged "caught up from Relay after restart". Backend adds `backfilled: boolean` to the `agent_message` payload: messages the coordinator pulls with `messages.list` at startup are `true`.
-7. **Diagnosis keeps its timestamp**: the diagnosis card shows the time it was committed; after recovery it must be the same card, not a new one.
-8. **Every agent message** shows `from → to` and "via Agent Relay".
-9. **Big type**: projector. Body ≥ 18 px; PIDs, the downtime and the slot times one size up.
+Record at 15:00 by this script, two full takes minimum; the better one is the submission. Screen recording of the browser with the terminal as a floating window over it; Nagisa's voice over the recording, not live sync, so a stumble costs one re-record of audio, not a re-run. Note where 0:15, 1:15 and 1:35 fall in the take. Leave 15:30 onward for the YouTube upload (processing takes a few minutes) and Devpost.
 
 ## 6. When it goes wrong
 
-- Anything stalls more than 5 seconds: no debugging on stage. Brad cuts to the backup video at the same point, Nagisa keeps talking. Record the video at 15:15 by this script and note where 0:28, 0:40 and 1:30 fall in it.
-- Judge presses the button too late (case already past `dispatching`): the button is disabled by then, nothing happens. Say "too late, it already finished; let me run it again with the checkbox" and run the checkbox flow. Rehearse this once.
-- 14:00 checkpoint fell back to "kill coordinator only" (plan-onsite §4): sentence 4 becomes "SIGKILL on the dispatcher", drop the actors runtime and the downtime.
-- 13:00 checkpoint fell back to a single diagnosis call: 0:28 becomes "Diagnosing…", the twin highlight fires when the result arrives instead of while streaming.
-- Kill button not built: use the checkbox, 0:22 becomes "and I've told it to crash itself mid-negotiation", 0:00 drops "one of you will kill it".
+- Restart does not resume (14:00 checkpoint, plan-1h §5): no kill in the video. 1:15 becomes "The dispatcher confirms, and the case survives in a Durable Actor: here is its state, every step checkpointed", with Brad showing the actor's state in the terminal. Drop "one of them is going to die" from 0:00.
+- Only the coordinator can be killed, not the actors runtime: that is already the plan; the words do not mention the actors process.
+- Frontend not live at 14:00: demo from the terminal for the case flow and `/dispatch` on the fixture for 0:35; the words at 0:15 and 0:55 point at terminal output instead. Big terminal font.
+- Streaming diagnosis fell back to a single call: 0:15 becomes "Diagnosing…", then point at the capacitor line when it arrives. The real-time AI line gets weaker; nothing else changes.
+- Supabase timebox missed: the twin is a fixture, drop "That twin lives in Supabase", and say "Supabase" nowhere.
+- Brad kills too early (before `slot_accepted`): the coordinator resumes from an earlier checkpoint and the demo still works; the recovery card just names a different checkpoint. Read what the card says. If the kill lands before the provider replied, the gold tag will be on a different message or absent; skip "in gold here".
+- Anything stalls more than 5 seconds during a take: stop, fix, re-record; never narrate over a stall.
 
-## 7. What this adds to the on-site plan, and what it costs
+## 7. Likely questions, one sentence each
 
-| Change | Who | Est. | Falls back to |
-|---|---|---|---|
-| `armPlug` + `POST /api/demo/pull-plug` + the button | Brad 15 min, Nagisa 15 min | 30 min | checkbox |
-| `GET /api/provider` reading `ProviderCalendar` + calendar column | Brad 10 min, Nagisa 20 min | 30 min | say "one booking" without showing it |
-| Tombstone card instead of banner | Nagisa | 10 min | plain banner |
-| Twin highlight on "capacitor" | Nagisa | 10 min | point at it by hand |
-| `backfilled` flag | Brad | 5 min | tag by timestamp on the frontend |
-| Streaming diagnosis (plain text, no JSON) | Brad 15 min, Nagisa 10 min | 25 min | single call |
-
-About 110 minutes in a day that has no slack. Take it from 14:00–14:45 (integration and polish) and from building the three columns as one page from the start rather than three pages then merging. Order if time runs short: button → calendar column → tombstone → highlight; everything else has a fallback that only changes one sentence.
-
-Also needed because judging runs 16:00–17:00 and we may demo several times: seed 10+ open slots with the preferred one permanently taken, so every run gets its rejection; power cable, sleep off, hotspot on.
-
-## 8. Likely questions, one sentence each
-
-- **"Isn't this just a database and a retry?"** Durable Actors has no workflow engine, so after a crash nothing resumes by itself; we put the record in the actor and the execution in a process that can die at any time, and the outbox plus Relay's idempotency keys make "died after sending, before recording" safe.
-- **"Why is Relay local?"** Hosted was 2–4 s per message in our tests, local is 10–20 ms; same code, one environment variable, happy to flip it.
-- **"How does this scale?"** Each case's state lives in its own actor; what cases share lives in Postgres. A million users is a lot of actors, not a bigger actor.
-- **"Is the provider a real agent?"** It's a separate process with its own calendar actor that acts only when a Relay message arrives; today its scheduling rules are hard-coded.
+- **"Isn't this just a database and a retry?"** Durable Actors has no workflow engine, so after a crash nothing resumes by itself; the record lives in the actor, the execution in a process that can die at any time, and the outbox plus Relay's idempotency keys make "died after sending, before recording" safe.
+- **"Why is Relay local?"** Hosted was 2–4 s per message in our tests, local is 10–20 ms; same code, one environment variable.
+- **"How does this scale?"** Each case's state lives in its own actor; what cases share lives in Postgres. A million homes is a lot of actors, not a bigger actor.
+- **"Is the provider a real agent?"** It's a separate process with its own calendar actor that acts only when a Relay message arrives; today its scheduling rules are hard-coded and the booking waits for a human dispatcher's confirm.
 - **"What happens if you kill the provider?"** Same pattern: it claims each message in its calendar actor before replying, so on restart it re-reads Relay and skips what it already answered. We didn't demo it for time.
+- **"Why only one LLM call?"** The diagnosis is the step that needs judgment; slot selection is a rule today, and the next step is to let the model negotiate with the shop's constraints.
