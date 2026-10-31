@@ -24,8 +24,10 @@ export function HomeApp() {
   useEffect(() => {
     try {
       // ?case=<id> reopens a case (rehearsal, screenshots); otherwise the one this tab submitted.
+      // Read after mount, not in the initializer: the server renders the form, so a lazy initializer would mismatch on hydration.
       const fromUrl = new URLSearchParams(window.location.search).get("case");
       const saved = fromUrl ?? window.sessionStorage.getItem(STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of URL/sessionStorage after mount
       if (saved) setCaseId(saved);
     } catch {
       // Private window or storage blocked; start fresh.
