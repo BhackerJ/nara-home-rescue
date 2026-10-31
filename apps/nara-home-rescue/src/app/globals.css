@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  --font-plus-jakarta: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-fraunces: "Fraunces", Georgia, serif;
+  --sand: #efe8dc;
+  --cream: #f7f3ec;
+  --paper: #fffcf7;
+  --ink: #1e1a16;
+  --muted: #7a7268;
+  --line: #e4ddd2;
+  --sage: #3f5c4a;
+  --sage-deep: #2f4638;
+  --sage-soft: #e7eee8;
+  --gold: #b08958;
+  --gold-soft: #f3eadc;
+}
+
+@theme inline {
+  --color-sand: var(--sand);
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-sage: var(--sage);
+  --color-sage-deep: var(--sage-deep);
+  --color-sage-soft: var(--sage-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --font-sans: var(--font-plus-jakarta);
+  --font-serif: var(--font-fraunces);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  background: var(--sand);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-plus-jakarta), system-ui, sans-serif;
+  min-height: 100dvh;
+}
+
+.nara-serif {
+  font-family: var(--font-fraunces), Georgia, serif;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 480ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
