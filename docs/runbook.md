@@ -2,25 +2,39 @@
 
 2026-10-31 13:30 · what to type, in order. Everything runs from the repo root on Brad's Mac. Full flow verified end to end at 13:26 (kill at the CONFIRM wait, restart, confirmed, one booking, confirm tagged backfilled).
 
-## Which UI (decided 13:50)
+## Setup on another Mac (Nagisa)
 
-The pitch uses Nagisa's app, `apps/nara-home-rescue` on **:3000**, with `/api/*` proxied to :3100. So :3100 must stay up as the API even though nobody looks at it. The `/home` and `/dispatch` pages on :3100 are the verified fallback: if the :3000 wiring has not passed the kill/restart check below by 14:30, demo on :3100.
+Needs Bun ≥ 1.4.2 (`bun upgrade`), Node 24 and Node 22 (`nvm install 22`), and three things that are not in git:
 
-| 6 | `cd apps/nara-home-rescue && npx next dev -p 3000` | ready on :3000 |
+1. `git clone` the repo, then `npm install` at the root, in `apps/dispatch-frontend` and in `apps/nara-home-rescue`.
+2. `.env` at the root (copy `.env.example`), with the Supabase password from Brad, plus the OpenAI key:
+   ```
+   HOME_RESCUE_DATABASE_URL=postgres://home_rescue_app.<ref>:<password>@aws-0-us-east-1.pooler.supabase.com:5432/postgres
+   DATABASE_SSL=insecure
+   RELAY_BASE_URL=http://localhost:8787
+   DURABLE_ACTORS_CONTROL_PLANE_URL=http://127.0.0.1:7100
+   OPENAI_API_KEY=sk-...
+   ```
+   Brad sends the filled `.env` directly; it is gitignored.
+3. Relay agent tokens: with terminal 2 (relay) running, `npm run smoke:relay` once. It creates the workspace and writes `relay/state.json` (gitignored). The provider and the coordinator refuse to start without it.
 
-The demo window is `http://localhost:3000` (branch `feature/live-rescue-demo` until merged). `?mode=mock` plays Nagisa's scripted version as the last-resort fallback. Passed the kill/restart check at 13:55 with 0 console errors.
+Then the four terminals below, `node scripts/reset-demo.mjs`, open `http://localhost:3000`, click **Play demo** and step with **Next**.
 
-## Terminals (keep all five open)
+## Which UI
+
+The pitch uses Nagisa's presenter, `apps/nara-home-rescue` on **:3000**: her screens turned by hand with Next/Previous, the live agent log on the right and the model's diagnosis and technician reason on the screens. `/api/*` is proxied to :3100, so :3100 must stay up as the API even though nobody looks at it. `http://localhost:3000/?mode=live` is the plain three-pane live view, the fallback if her screens misbehave.
+
+## Terminals (keep all four open)
 
 | # | Command | Must show |
 |---|---|---|
 | 1 | `npm run actors` | `Ready http://127.0.0.1:7100` |
 | 2 | `nvm use && npm run relay` (Node 22) | engine on :8787 |
 | 3 | `cd apps/dispatch-frontend && npx next dev -p 3100` | ready on :3100 |
-| 4 | `node scripts/provider.mjs` | `listening on #home-rescue as provider` |
-| 5 | `node scripts/coordinator.mjs` | `boot <id> pid <n>` |
+| 4 | `node scripts/demo-director.mjs` | `listening on :7300`, then `provider started`, `coordinator started` |
+| 5 | `cd apps/nara-home-rescue && npx next dev -p 3000` | ready on :3000 |
 
-Terminal 5 is the one on screen during the demo: the kill and the restart happen there.
+Terminal 4 replaces the old provider and coordinator terminals: the director starts both, kills and revives the coordinator when you press **Play demo**, and restarts either agent if it dies. Never start `scripts/provider.mjs` or `scripts/coordinator.mjs` by hand while it is running.
 
 ## Before every run (rehearsal, recording, each judge)
 
