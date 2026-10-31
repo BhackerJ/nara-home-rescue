@@ -2,6 +2,14 @@
 
 2026-10-31 13:30 · what to type, in order. Everything runs from the repo root on Brad's Mac. Full flow verified end to end at 13:26 (kill at the CONFIRM wait, restart, confirmed, one booking, confirm tagged backfilled).
 
+## Which UI (decided 13:50)
+
+The pitch uses Nagisa's app, `apps/nara-home-rescue` on **:3000**, with `/api/*` proxied to :3100. So :3100 must stay up as the API even though nobody looks at it. The `/home` and `/dispatch` pages on :3100 are the verified fallback: if the :3000 wiring has not passed the kill/restart check below by 14:30, demo on :3100.
+
+| 6 | `cd apps/nara-home-rescue && npx next dev -p 3000` | ready on :3000 |
+
+The demo window is `http://localhost:3000` (branch `feature/live-rescue-demo` until merged). `?mode=mock` plays Nagisa's scripted version as the last-resort fallback. Passed the kill/restart check at 13:55 with 0 console errors.
+
 ## Terminals (keep all five open)
 
 | # | Command | Must show |

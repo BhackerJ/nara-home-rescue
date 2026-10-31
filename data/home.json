@@ -1,8 +1,8 @@
 {
-  "id": "home-demo-palo-alto",
-  "label": "Demo Home · Palo Alto",
-  "address": "1847 Maple St",
-  "city": "Palo Alto",
+  "id": "home-1847-maple",
+  "label": "1847 Maple Street · Hayward",
+  "address": "1847 Maple Street",
+  "city": "Hayward",
   "state": "CA",
   "equipment": [
     {
@@ -14,7 +14,7 @@
     }
   ],
   "history": [
-    { "date": "2023-07-14", "summary": "Run capacitor replaced on outdoor unit (45/5 µF)" },
-    { "date": "2025-04-02", "summary": "Spring maintenance: coil cleaned, refrigerant charge checked" }
+    { "date": "2023-07-14", "summary": "Run capacitor replaced on the Carrier condenser (45/5 µF)" },
+    { "date": "2021-05-03", "summary": "Annual maintenance: coil cleaned, refrigerant charge checked" }
   ]
 }

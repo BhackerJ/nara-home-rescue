@@ -248,11 +248,29 @@ function ReportForm({
   );
 }
 
+// Display pacing only (design-hackathon §7): the model finishes in ~1 s, so the card reveals the text it already has
+// at ~25 characters per 60 ms. A case that already has its narrative on first render shows it at once.
+function useTypewriter(target: string) {
+  const [shown, setShown] = useState(target);
+  useEffect(() => {
+    if (shown === target) return;
+    if (!target.startsWith(shown)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the text was replaced, not extended
+      setShown(target);
+      return;
+    }
+    const timer = setTimeout(() => setShown(target.slice(0, shown.length + 25)), 60);
+    return () => clearTimeout(timer);
+  }, [shown, target]);
+  return shown;
+}
+
 function CaseTimeline({ caseId, live, onReset }: { caseId: string; live: ServiceCase | null; onReset: () => void }) {
   const events = live?.events ?? [];
   const diagnosedAt = events.find((e) => e.type === "step_completed" && e.payload.step === "diagnosed")?.timestamp;
-  const narrative = live?.diagnostic.narrative || live?.draftDiagnosis || "";
-  const streaming = live?.status === "diagnosing" || (!narrative && live?.status === "created");
+  const fullNarrative = live?.diagnostic.narrative || live?.draftDiagnosis || "";
+  const narrative = useTypewriter(fullNarrative);
+  const streaming = live?.status === "diagnosing" || narrative.length < fullNarrative.length || (!narrative && live?.status === "created");
   // Agent messages and restarts in the order they happened, so the crash shows where it happened.
   const timeline = events.filter((e) => e.type === "agent_message" || e.type === "recovery_started");
   const errors = events.filter((e) => e.type === "error");
