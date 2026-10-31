@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { AgentRelay } from "@agent-relay/sdk";
+import { decide } from "./llm.mjs";
 
 try { process.loadEnvFile(".env"); } catch {}
 const { actors } = await import("../generated/actors/index.js");
@@ -118,6 +119,31 @@ async function sendStep(sc, c, { step, kind, status, payload, result }) {
   log(`${caseId}: sent ${kind} (${sent.messageId}) -> ${step}`);
 }
 
+// Step 4: the dispatch agent picks one of the provider's alternatives and says why. Runs before stageStep,
+// so a crash during the call just re-runs it; a crash after stageStep resends the staged message.
+async function chooseSlot(c, alternatives, technician) {
+  const fallback = { slot: alternatives[0], reason: "" };
+  if (alternatives.length === 1) return fallback;
+  const picked = await decide({
+    name: "choose_slot",
+    log,
+    system: "You are the dispatch agent for a homeowner. Choose one appointment slot from the provider's alternatives. Reply with the slot exactly as written and one short sentence (max 25 words) explaining the choice to the homeowner.",
+    user: [
+      `Homeowner preferred: ${c.data.preferredSlot} (taken).`,
+      `Alternatives offered: ${alternatives.join(" | ")}`,
+      `Issue: ${c.data.issue}. Symptoms: ${(c.data.symptoms ?? []).join("; ")}.`,
+      technician ? `Technician the shop proposes: ${technician.name}, ${technician.title}.` : "",
+      "Prefer the earliest slot unless there is a clear reason not to.",
+    ].join("\n"),
+    schema: {
+      type: "object", additionalProperties: false, required: ["slot", "reason"],
+      properties: { slot: { type: "string", enum: alternatives }, reason: { type: "string" } },
+    },
+  });
+  if (!picked || !alternatives.includes(picked.slot)) return fallback;
+  return { slot: picked.slot, reason: String(picked.reason ?? "").slice(0, 200) };
+}
+
 function agentMessageEvent(msg) {
   return { type: "agent_message", payload: { from: "provider", to: "dispatch", kind: msg.body.kind, body: msg.text, relayMessageId: msg.id, backfilled: msg.backfilled } };
 }
@@ -130,29 +156,45 @@ async function step(sc, c) {
     case "created":
       await diagnose(sc, c);
       return "next";
-    case "diagnosed":
-      await sendStep(sc, c, { step: "slot_requested", kind: "slot_request", status: "awaiting_provider", payload: { requestedSlot: c.data.preferredSlot }, result: { requestedSlot: c.data.preferredSlot } });
+    case "diagnosed": {
+      // The job packet the shop receives: slot plus what the diagnostic agent learned.
+      const eq = home.equipment[0];
+      const payload = {
+        requestedSlot: c.data.preferredSlot,
+        summary: (c.results.diagnosed?.narrative ?? "").slice(0, 600),
+        symptoms: c.data.symptoms ?? [],
+        equipment: `${eq.brand} ${eq.model} (${eq.installedYear})`,
+      };
+      await sendStep(sc, c, { step: "slot_requested", kind: "slot_request", status: "awaiting_provider", payload, result: { requestedSlot: c.data.preferredSlot } });
       return "next";
+    }
     case "slot_requested": {
       const msg = reply("reject");
       if (!msg) return "wait";
-      await sc.completeStep({ step: "slot_rejected", status: "negotiating", agent: "dispatch", relayMessageId: msg.id, events: [agentMessageEvent(msg)], result: { alternatives: msg.body.alternatives } });
-      log(`${caseId}: provider rejected ${c.data.preferredSlot}; alternatives ${msg.body.alternatives.join(" / ")}${msg.backfilled ? " (backfilled)" : ""}`);
+      const { alternatives, technician = null, reason = "" } = msg.body;
+      await sc.completeStep({ step: "slot_rejected", status: "negotiating", agent: "dispatch", relayMessageId: msg.id, events: [agentMessageEvent(msg)], result: { alternatives, technician, reason } });
+      log(`${caseId}: provider rejected ${c.data.preferredSlot}; alternatives ${alternatives.join(" / ")}; technician ${technician?.name ?? "n/a"}${msg.backfilled ? " (backfilled)" : ""}`);
       return "next";
     }
     case "slot_rejected": {
-      const slot = c.results.slot_rejected?.alternatives?.[0];
-      if (!slot) throw new Error("no alternative slot recorded");
-      await sendStep(sc, c, { step: "slot_accepted", kind: "accept", status: "awaiting_provider", payload: { slot }, result: { slot } });
+      const alternatives = c.results.slot_rejected?.alternatives ?? [];
+      if (!alternatives.length) throw new Error("no alternative slot recorded");
+      const technician = c.results.slot_rejected?.technician ?? null;
+      const pick = await chooseSlot(c, alternatives, technician);
+      await sendStep(sc, c, {
+        step: "slot_accepted", kind: "accept", status: "awaiting_provider",
+        payload: { slot: pick.slot, reason: pick.reason, technicianId: technician?.id ?? null }, result: { slot: pick.slot, reason: pick.reason },
+      });
+      log(`${caseId}: accepted ${pick.slot}${pick.reason ? ` — ${pick.reason}` : ""}`);
       return "next";
     }
     case "slot_accepted": {
       const msg = reply("confirm");
       if (!msg) return "wait";
-      const { slot, key, reused } = msg.body;
+      const { slot, key, reused, technician = null } = msg.body;
       await sc.completeStep({
         step: "booked", status: "negotiating", agent: "dispatch", relayMessageId: msg.id,
-        events: [agentMessageEvent(msg), { type: "booking", payload: { slot, idempotencyKey: key, reused: Boolean(reused) } }], result: { slot },
+        events: [agentMessageEvent(msg), { type: "booking", payload: { slot, idempotencyKey: key, reused: Boolean(reused), technician: technician?.name ?? "" } }], result: { slot, technician },
       });
       log(`${caseId}: booked ${slot}${reused ? " (reused booking)" : ""}${msg.backfilled ? " (backfilled)" : ""}`);
       return "next";

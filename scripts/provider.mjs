@@ -4,8 +4,11 @@
 // Never killed in the demo. Dedupe: ProviderCalendar.claim(messageId); replies use idempotencyKey <caseId>:provider:<kind>.
 import fs from "node:fs";
 import { AgentRelay } from "@agent-relay/sdk";
+import { decide } from "./llm.mjs";
 
 try { process.loadEnvFile(".env"); } catch {}
+const technicians = JSON.parse(fs.readFileSync("data/technicians.json", "utf8"));
+const publicTech = (t) => (t ? { id: t.id, name: t.name, title: t.title } : null);
 const { actors } = await import("../generated/actors/index.js");
 
 const baseUrl = process.env.RELAY_BASE_URL ?? "http://localhost:8787";
@@ -39,18 +42,46 @@ async function handle(m, source) {
   const caseId = body.caseId;
   if (body.kind === "slot_request") {
     const offer = await calendar.offer(caseId, body.requestedSlot);
-    const replyId = await send(caseId, "reject", { requestedSlot: body.requestedSlot, alternatives: offer.alternatives, inReplyTo: m.id });
+    const match = await matchTechnician(body);
+    const replyId = await send(caseId, "reject", {
+      requestedSlot: body.requestedSlot, alternatives: offer.alternatives, technician: publicTech(match.technician), reason: match.reason, inReplyTo: m.id,
+    });
     await calendar.markReplied(m.id, replyId);
-    log(`rejected ${body.requestedSlot}; offered ${offer.alternatives.join(" / ")}`);
+    log(`rejected ${body.requestedSlot}; offered ${offer.alternatives.join(" / ")}; technician ${match.technician?.name ?? "n/a"}${match.reason ? ` — ${match.reason}` : ""}`);
     return;
   }
   // accept: the shop dispatcher must click CONFIRM first (this wait is the demo's kill window).
   log(`waiting for CONFIRM on ${caseId}...`);
   while (!(await calendar.isApproved(caseId))) await sleep(300);
   const booking = await calendar.book({ slot: body.slot, key: `${caseId}:book`, caseId });
-  const replyId = await send(caseId, "confirm", { slot: booking.slot, key: booking.key, reused: booking.reused, inReplyTo: m.id });
+  const technician = publicTech(technicians.find((t) => t.id === body.technicianId) ?? technicians[0]);
+  const replyId = await send(caseId, "confirm", { slot: booking.slot, key: booking.key, reused: booking.reused, technician, inReplyTo: m.id });
   await calendar.markReplied(m.id, replyId);
   log(`booked ${booking.slot} (${booking.reused ? "reused" : "new"}) -> confirm sent`);
+}
+
+// The shop's LLM reads the job packet and picks a technician from the roster, with one sentence of reasoning.
+async function matchTechnician(job) {
+  const fallback = { technician: technicians[0], reason: "" };
+  const ids = technicians.map((t) => t.id);
+  const picked = await decide({
+    name: "match_technician",
+    log,
+    system: "You are the dispatcher at Cool Air Mechanical, an HVAC shop. Pick the one technician from the roster best suited to this job. Reply with the technician id and one short sentence (max 25 words) for the homeowner on why this technician.",
+    user: [
+      `Job: ${job.summary || "(no summary)"}`,
+      `Symptoms: ${(job.symptoms ?? []).join("; ")}`,
+      `Equipment: ${job.equipment ?? "unknown"}`,
+      "", "Roster:", JSON.stringify(technicians, null, 1),
+    ].join("\n"),
+    schema: {
+      type: "object", additionalProperties: false, required: ["technicianId", "reason"],
+      properties: { technicianId: { type: "string", enum: ids }, reason: { type: "string" } },
+    },
+  });
+  const technician = technicians.find((t) => t.id === picked?.technicianId);
+  if (!technician) return fallback;
+  return { technician, reason: String(picked.reason ?? "").slice(0, 200) };
 }
 
 function safeHandle(m, source) {
