@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nara Home Rescue 后端</title>
+<style>
+:root {
+  --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b72; --line: #c8c6bf;
+  --box: #ffffff; --inner: #eef3fd; --band: #faf9f6; --band2: #f2f1ec;
+  --accent: #2f6fde; --relay: #7a4cc2; --kill: #d6453d; --killbg: #fdeceb; --supa: #2a9a68; --ok: #2a9a68;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131315; --panel: #1b1b1e; --ink: #ececee; --muted: #9d9da6; --line: #45454c;
+    --box: #222226; --inner: #1e2839; --band: #1d1d21; --band2: #222227;
+    --accent: #6e9cff; --relay: #b18ef2; --kill: #ff6b62; --killbg: #3a1f1e; --supa: #4cc28e; --ok: #4cc28e;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131315; --panel: #1b1b1e; --ink: #ececee; --muted: #9d9da6; --line: #45454c;
+  --box: #222226; --inner: #1e2839; --band: #1d1d21; --band2: #222227;
+  --accent: #6e9cff; --relay: #b18ef2; --kill: #ff6b62; --killbg: #3a1f1e; --supa: #4cc28e; --ok: #4cc28e;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.55 -apple-system, "PingFang SC", "Helvetica Neue", sans-serif; }
+main { max-width: 1440px; margin: 0 auto; padding: 28px 16px 60px; }
+h1 { font-size: 26px; margin: 0 0 4px; }
+.sub { color: var(--muted); margin: 0 0 24px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px 20px; margin-bottom: 22px; }
+h2 { font-size: 17px; margin: 0 0 4px; }
+.lead { color: var(--muted); margin: 0 0 12px; font-size: 13px; }
+.scroll { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 1100px; height: auto; }
+code, .mono { font-family: "SF Mono", Menlo, monospace; font-size: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 18px; color: var(--muted); font-size: 12px; margin-top: 10px; }
+.legend span::before { content: ""; display: inline-block; width: 26px; height: 0; vertical-align: middle; margin-right: 6px; border-top: 2px solid var(--ink); }
+.legend .lr::before { border-top-color: var(--relay); }
+.legend .lk::before { border-top: 2px dashed var(--kill); }
+.steps { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.step { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--box); position: relative; }
+.step b { display: block; font-size: 13px; margin-bottom: 4px; }
+.step p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.step .n { color: var(--accent); font-weight: 700; margin-right: 4px; }
+.step.kill { border-color: var(--kill); }
+.step.kill .n { color: var(--kill); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; }
+ul { margin: 6px 0 0; padding-left: 18px; }
+li { margin: 3px 0; }
+.note { margin-top: 12px; font-size: 13px; color: var(--muted); }
+@media (max-width: 900px) { .steps { grid-template-columns: 1fr 1fr; } .cols { grid-template-columns: 1fr; } }
+
+/* SVG */
+.bx { fill: var(--box); stroke: var(--line); stroke-width: 1.2; }
+.bx-a { fill: var(--box); stroke: var(--accent); stroke-width: 1.6; }
+.bx-in { fill: var(--inner); stroke: none; }
+.bx-r { fill: var(--box); stroke: var(--relay); stroke-width: 1.6; }
+.bx-s { fill: var(--box); stroke: var(--supa); stroke-width: 1.6; }
+.chip { fill: var(--inner); stroke: none; }
+.zone { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 6 5; }
+.t { fill: var(--ink); font-size: 15px; font-weight: 600; }
+.t2 { fill: var(--ink); font-size: 13px; font-weight: 600; }
+.s { fill: var(--muted); font-size: 12px; }
+.zl { fill: var(--muted); font-size: 13px; font-weight: 600; }
+.mono { font-family: "SF Mono", Menlo, monospace; }
+.c { text-anchor: middle; }
+.e { text-anchor: end; }
+.ln { stroke: var(--ink); stroke-width: 1.5; fill: none; }
+.ln-r { stroke: var(--relay); stroke-width: 2; fill: none; }
+.ln-k { stroke: var(--kill); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+.lbl { fill: var(--ink); font-size: 12px; }
+.lbl-r { fill: var(--relay); font-size: 12px; }
+.lbl-k { fill: var(--kill); font-size: 12px; }
+.badge { fill: var(--kill); }
+.badge-t { fill: #fff; font-size: 11px; font-weight: 600; }
+.okt { fill: var(--ok); font-size: 12px; }
+.mk { fill: var(--ink); } .mk-r { fill: var(--relay); } .mk-k { fill: var(--kill); }
+.life { stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 3 4; }
+.life-down { stroke: var(--kill); stroke-width: 2; stroke-dasharray: 2 5; }
+.band { fill: var(--band); } .band2 { fill: var(--band2); } .band-k { fill: var(--killbg); }
+.bh { font-size: 13px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke-width: 6px; stroke-linejoin: round; }
+.bh-s { font-size: 12px; font-weight: 400; fill: var(--muted); }
+.bh-k { fill: var(--kill); }
+.lblbg { fill: var(--panel); opacity: .92; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Nara Home Rescue · 后端设计</h1>
+  <p class="sub">按 <code>~/nara-home-rescue/docs/design-hackathon.md</code> 第四稿（2026-10-25）画 · YC Haunted Hacks 2026-10-31 · 前端 Nagisa，后端 Brad</p>
+
+  <section>
+    <h2>1 · 系统结构</h2>
+    <p class="lead">一台电脑上五个进程，外加两个托管服务。ServiceCase actor 是工单流程唯一的真相来源；两个 runner（coordinator、provider）只执行，不留状态，彼此只通过 Relay 说话。</p>
+    <div class="scroll">
+    <svg viewBox="0 0 1400 730" role="img" aria-label="系统结构图">
+      <defs>
+        <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-r" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-k" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+
+      <!-- zones -->
+      <rect class="zone" x="20" y="30" width="970" height="680" rx="14"/>
+      <text class="zl" x="40" y="56">Nagisa 的 Mac · npm run demo 一条命令起全部进程</text>
+      <rect class="zone" x="1010" y="30" width="370" height="680" rx="14"/>
+      <text class="zl" x="1030" y="56">托管服务 · 需要网络</text>
+
+      <!-- browser -->
+      <rect class="bx" x="60" y="80" width="260" height="52" rx="10"/>
+      <text class="t c" x="190" y="104">浏览器</text>
+      <text class="s c" x="190" y="122">演示页面 · Recovery Monitor</text>
+      <line class="ln" x1="190" y1="132" x2="190" y2="194" marker-end="url(#a)"/>
+      <text class="lbl" x="198" y="170">每 300ms 拉一次</text>
+
+      <!-- web -->
+      <rect class="bx" x="60" y="196" width="260" height="70" rx="10"/>
+      <text class="t c" x="190" y="224">web · Next.js</text>
+      <text class="s c" x="190" y="246">Nagisa 写 · route handlers /api/*</text>
+      <line class="ln" x1="320" y1="231" x2="378" y2="231" marker-end="url(#a)"/>
+      <text class="lbl c" x="349" y="223">HTTP</text>
+
+      <!-- web -> supabase -->
+      <path class="ln" d="M300,196 L300,160 L1110,160 L1110,176" marker-end="url(#a)"/>
+      <text class="lbl c" x="905" y="180">读 home · 写 case_summary</text>
+
+      <!-- supervisor -->
+      <rect class="bx" x="380" y="64" width="420" height="84" rx="10"/>
+      <text class="t c" x="590" y="90">supervisor · scripts/demo.mjs · :7300</text>
+      <text class="s c" x="590" y="112">起、停、重启全部进程 · 退出就重启（1、2、4…30 秒退避）</text>
+      <text class="lbl-k c" x="590" y="134">/pull-plug = 同时 SIGKILL coordinator 和 actors</text>
+
+      <!-- actors -->
+      <rect class="bx-a" x="380" y="178" width="420" height="210" rx="12"/>
+      <text class="t c" x="590" y="204">actors · Bun · durable-actors dev :7100</text>
+      <rect class="bx-in" x="396" y="220" width="190" height="120" rx="8"/>
+      <text class="t2 c" x="491" y="244">ServiceCase</text>
+      <text class="s c" x="491" y="262">每个工单一个</text>
+      <text class="lbl c" x="491" y="286">状态 · 进度点</text>
+      <text class="lbl c" x="491" y="304">发件箱 · 诊断草稿</text>
+      <text class="lbl c" x="491" y="322">事件日志（网页读这里）</text>
+      <rect class="bx-in" x="596" y="220" width="190" height="120" rx="8"/>
+      <text class="t2 c" x="691" y="244">ProviderCalendar</text>
+      <text class="s c" x="691" y="262">维修商的排期</text>
+      <text class="lbl c" x="691" y="286">时段</text>
+      <text class="lbl c" x="691" y="304">按 key 防重复预约</text>
+      <text class="lbl c" x="691" y="322">已处理的消息</text>
+      <text class="s c" x="590" y="370">每个 actor 一个 SQLite，落在固定磁盘路径，重启后原样回来</text>
+      <rect class="badge" x="660" y="167" width="128" height="22" rx="11"/>
+      <text class="badge-t c" x="724" y="182">⚡ 拔电源时被杀</text>
+
+      <!-- provider -->
+      <rect class="bx" x="120" y="450" width="300" height="130" rx="12"/>
+      <text class="t c" x="270" y="478">provider · Node 22</text>
+      <text class="s c" x="270" y="500">维修商 agent · Bay Comfort HVAC（模拟）</text>
+      <text class="lbl c" x="270" y="524">收到 Relay 消息才行动</text>
+      <text class="lbl c" x="270" y="544">查排期 · 拒绝 · 确认</text>
+      <text class="okt c" x="270" y="566">独立进程，拔电源时照常运行</text>
+      <line class="ln" x1="400" y1="450" x2="400" y2="391" marker-end="url(#a)"/>
+      <text class="lbl e" x="392" y="424">claim · book · markReplied</text>
+
+      <!-- coordinator -->
+      <rect class="bx" x="560" y="450" width="380" height="140" rx="12"/>
+      <text class="t c" x="750" y="478">coordinator · Node 22</text>
+      <rect class="bx-in" x="576" y="494" width="170" height="80" rx="8"/>
+      <text class="t2 c" x="661" y="518">diagnostic agent</text>
+      <text class="lbl c" x="661" y="538">读 Home Twin</text>
+      <text class="lbl c" x="661" y="556">调 OpenAI 流式诊断</text>
+      <rect class="bx-in" x="756" y="494" width="170" height="80" rx="8"/>
+      <text class="t2 c" x="841" y="518">dispatch agent</text>
+      <text class="lbl c" x="841" y="538">请求时段</text>
+      <text class="lbl c" x="841" y="556">在替代时段里选一个</text>
+      <rect class="badge" x="800" y="439" width="128" height="22" rx="11"/>
+      <text class="badge-t c" x="864" y="454">⚡ 拔电源时被杀</text>
+      <line class="ln" x1="640" y1="450" x2="640" y2="391" marker-end="url(#a)"/>
+      <text class="lbl" x="648" y="424">stageStep · completeStep · setDraft</text>
+
+      <!-- coordinator -> cloud -->
+      <line class="ln" x1="940" y1="515" x2="1028" y2="515" marker-end="url(#a)"/>
+      <text class="lbl c" x="984" y="507">流式</text>
+      <path class="ln" d="M920,450 L920,410 L1195,410 L1195,381" marker-end="url(#a)"/>
+      <text class="lbl c" x="1060" y="430">每秒查 case_summary</text>
+      <text class="lbl c" x="1060" y="447">写 service_history</text>
+
+      <!-- relay -->
+      <rect class="bx-r" x="340" y="630" width="380" height="60" rx="12"/>
+      <text class="t c" x="530" y="656">relay · @relaycast/engine :8787</text>
+      <text class="s c" x="530" y="676">channel 消息存 SQLite · idempotencyKey 去重</text>
+      <path class="ln-r" d="M270,580 L270,660 L337,660" marker-start="url(#ar)" marker-end="url(#ar)"/>
+      <text class="lbl-r" x="278" y="622">Relay 消息</text>
+      <path class="ln-r" d="M750,590 L750,660 L723,660" marker-start="url(#ar)" marker-end="url(#ar)"/>
+      <text class="lbl-r" x="758" y="626">Relay 消息</text>
+
+      <!-- supabase -->
+      <rect class="bx-s" x="1030" y="178" width="330" height="200" rx="12"/>
+      <text class="t c" x="1195" y="206">Supabase · nara-preview</text>
+      <text class="s c mono" x="1195" y="228">schema home_rescue · 角色 home_rescue_app</text>
+      <rect class="chip" x="1046" y="244" width="145" height="30" rx="6"/><text class="lbl c mono" x="1118" y="264">home</text>
+      <rect class="chip" x="1201" y="244" width="145" height="30" rx="6"/><text class="lbl c mono" x="1273" y="264">equipment</text>
+      <rect class="chip" x="1046" y="282" width="145" height="30" rx="6"/><text class="lbl c mono" x="1118" y="302">service_history</text>
+      <rect class="chip" x="1201" y="282" width="145" height="30" rx="6"/><text class="lbl c mono" x="1273" y="302">case_summary</text>
+      <text class="s c" x="1195" y="338">Home Twin + 工单索引（状态以 actor 为准）</text>
+      <text class="s c" x="1195" y="358">pg 走 session pooler · 浏览器不直连</text>
+
+      <!-- openai -->
+      <rect class="bx" x="1030" y="470" width="330" height="90" rx="12"/>
+      <text class="t c" x="1195" y="500">OpenAI</text>
+      <text class="s c" x="1195" y="522">只有诊断用 · 流式结构化输出</text>
+      <text class="s c" x="1195" y="542">Nara 现有 key</text>
+    </svg>
+    </div>
+    <div class="legend"><span>调用（HTTP / pg / API）</span><span class="lr">Relay 消息</span><span class="lk">拔电源（SIGKILL）</span></div>
+  </section>
+
+  <section>
+    <h2>2 · 一个工单从报修到确认</h2>
+    <p class="lead">只演一次故障：发出时段请求后拔电源。维修商和 Relay 照常运行；新 coordinator 从 actor 读回进度、从 Relay 补拉错过的拒绝，诊断不重做。网页显示的每一步都是 actor 里存下的事件。</p>
+    <div class="scroll"><svg id="seq" viewBox="0 0 1400 1200" role="img" aria-label="工单时序图"></svg></div>
+    <div class="legend"><span>调用</span><span class="lr">Relay 消息</span><span class="lk">调不通 / 进程不在</span></div>
+  </section>
+
+  <section>
+    <h2>3 · 发件箱：coordinator 发一条消息的固定顺序</h2>
+    <p class="lead">第 1、2、4 步都走这六步。在任何一处崩溃，恢复后都不会重复。</p>
+    <div class="steps">
+      <div class="step"><b><span class="n">1</span>读 ServiceCase</b><p>这一步已经完成，就跳过</p></div>
+      <div class="step"><b><span class="n">2</span>查发件箱</b><p>已有这一步的消息（上次没来得及发），跳到第 4 步</p></div>
+      <div class="step"><b><span class="n">3</span>stageStep</b><p>算出结果，连同消息原文写进发件箱（带 expectedRevision）</p></div>
+      <div class="step"><b><span class="n">4</span>原样发出</b><p><code>idempotencyKey = &lt;caseId&gt;:&lt;step&gt;</code>，Relay 按 key 返回同一条</p></div>
+      <div class="step"><b><span class="n">5</span>completeStep</b><p>记下 relayMessageId，清发件箱，status 改成等维修商</p></div>
+      <div class="step kill"><b><span class="n">6</span>预设了拔电源？</b><p>记 plug_pulled，调 supervisor <code>/pull-plug</code></p></div>
+    </div>
+    <div class="cols" style="margin-top:16px">
+      <div>
+        <b>为什么不会重复</b>
+        <ul>
+          <li>消息没发出去 → 重算一次</li>
+          <li>发出去了没记录 → 原样重发，Relay 按 key 返回原来那条（同 key 不同内容报 409）</li>
+          <li>已经记录的步骤 → 直接跳过</li>
+          <li>预约另由 ProviderCalendar 按 <code>&lt;caseId&gt;:book</code> 防重复，key 重复时记一条事件，界面上看得见</li>
+        </ul>
+      </div>
+      <div>
+        <b>provider 处理一条消息</b>
+        <ul>
+          <li><code>claim(messageId)</code>：处理过就直接返回</li>
+          <li>查排期或预约 → 模板回复，key <code>&lt;caseId&gt;:provider:&lt;kind&gt;</code></li>
+          <li><code>markReplied(messageId, replyMessageId)</code></li>
+          <li>启动时先 <code>messages.list</code>，补处理死掉期间到达的请求</li>
+        </ul>
+        <p class="note">出错统一处理：outcome_unknown、连接被拒、revision 不匹配、Relay 发送失败，一律退避（200ms 起翻倍，最多 2 秒）后重读 actor 重进循环；连续 20 次失败把工单设成 failed。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4 · 前后端接口</h2>
+    <p class="lead">全部是 Next.js route handler，服务端调用；类型沿用 PRD 第 6 节的 ServiceCase 和 CaseEvent（加 seq）。</p>
+    <div class="cols">
+      <table>
+        <tr><th>方法</th><th>路径</th><th>作用</th></tr>
+        <tr><td class="mono">GET</td><td class="mono">/api/home/:id</td><td>设备卡片和维修历史（读 Supabase）</td></tr>
+        <tr><td class="mono">POST</td><td class="mono">/api/cases</td><td><code>{ homeId, issue, symptoms, preferredSlot, armPlug }</code> → <code>{ caseId }</code></td></tr>
+        <tr><td class="mono">GET</td><td class="mono">/api/cases/:id</td><td>整个 ServiceCase 和全部 events（读 actor），页面每 300ms 拉</td></tr>
+        <tr><td class="mono">POST</td><td class="mono">/api/demo/pull-plug</td><td><code>{ caseId }</code>：coordinator 做完下一步就拔（备用按钮）</td></tr>
+        <tr><td class="mono">GET</td><td class="mono">/api/preflight</td><td>自检：actors、coordinator、provider、relay、supabase、openai，全绿才上台</td></tr>
+      </table>
+      <table>
+        <tr><th>CaseEvent.type</th><th>payload</th></tr>
+        <tr><td class="mono">agent_message</td><td class="mono">from, to, kind, body, relayMessageId, direction</td></tr>
+        <tr><td class="mono">step_completed</td><td class="mono">step, revision</td></tr>
+        <tr><td class="mono">plug_armed / plug_pulled</td><td class="mono">by, afterStep / step, bootId, pid</td></tr>
+        <tr><td class="mono">recovery_started</td><td class="mono">fromCheckpoint, previousBootId, bootId, pid, actorsDownMs</td></tr>
+        <tr><td class="mono">booking</td><td class="mono">providerId, slot, idempotencyKey, reused</td></tr>
+        <tr><td class="mono">home_updated / error</td><td class="mono">historyEntry / attempt, message</td></tr>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("seq");
+  const lanes = {
+    web:    { x: 160,  t: "web",          s: "Next.js" },
+    actors: { x: 380,  t: "actors",       s: "ServiceCase · ProviderCalendar" },
+    coord:  { x: 610,  t: "coordinator",  s: "diagnostic + dispatch" },
+    relay:  { x: 840,  t: "relay",        s: "@relaycast/engine" },
+    prov:   { x: 1060, t: "provider",     s: "维修商 agent" },
+    cloud:  { x: 1280, t: "Supabase / OpenAI", s: "托管" },
+  };
+  const bands = [
+    { h: "⓪ created", st: "status created", m: [
+      ["web", "actors", "ServiceCase.create"],
+      ["web", "cloud", "case_summary 加一行"] ] },
+    { h: "① diagnosed", st: "status diagnosing → dispatching", m: [
+      ["coord", "cloud", "每秒查 case_summary，接手新工单"],
+      ["coord", "cloud", "读 equipment + service_history"],
+      ["coord", "cloud", "OpenAI 流式结构化诊断"],
+      ["coord", "actors", "setDraft 每 250ms（诊断草稿）"],
+      ["coord", "actors", "stageStep 写发件箱"],
+      ["coord", "relay", "summary（问题摘要）", "r"],
+      ["coord", "actors", "completeStep"] ] },
+    { h: "② slot_requested", st: "status awaiting_provider", m: [
+      ["coord", "actors", "stageStep"],
+      ["coord", "relay", "slot_request（首选时段）", "r"],
+      ["relay", "prov", "slot_request", "r"],
+      ["coord", "actors", "completeStep"] ] },
+    { h: "⚡ 拔电源", st: "coordinator 记 plug_pulled → POST :7300/pull-plug → supervisor 同时 SIGKILL coordinator 和 actors", kill: true,
+      down: ["coord", "actors"], m: [
+      ["prov", "actors", "ProviderCalendar.claim → 调不通，退避重试", "k"] ] },
+    { h: "↻ 停 1 秒，supervisor 同时拉起 coordinator 和 actors", st: "新 coordinator 生成新 bootId", m: [] },
+    { h: "③ slot_rejected", st: "status recovering → negotiating", m: [
+      ["prov", "actors", "claim · 查排期：首选时段已被占"],
+      ["prov", "relay", "reject + 2 个替代时段", "r"],
+      ["prov", "actors", "markReplied"],
+      ["coord", "relay", "reconnect(token) 接回身份"],
+      ["coord", "actors", "beginRecovery(bootId)"],
+      ["coord", "relay", "messages.list 补拉"],
+      ["relay", "coord", "reject（断电期间到达）", "r"],
+      ["coord", "actors", "completeStep · 诊断不重做"] ] },
+    { h: "④ slot_accepted", st: "status awaiting_provider", m: [
+      ["coord", "actors", "stageStep：选替代时段"],
+      ["coord", "relay", "accept", "r"],
+      ["relay", "prov", "accept", "r"],
+      ["coord", "actors", "completeStep"] ] },
+    { h: "⑤ booked", st: "status negotiating", m: [
+      ["prov", "actors", "book(slot, key <caseId>:book) 按 key 防重复"],
+      ["prov", "relay", "confirm", "r"],
+      ["relay", "coord", "confirm", "r"],
+      ["coord", "actors", "completeStep"] ] },
+    { h: "⑥ home_updated", st: "status confirmed", m: [
+      ["coord", "cloud", "service_history 加一条（case_id 唯一）"],
+      ["coord", "actors", "status = confirmed → Home Twin 多一条"] ] },
+  ];
+
+  function el(tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  const g = { bands: el("g", {}), life: el("g", {}), msgs: el("g", {}), heads: el("g", {}) };
+  Object.values(g).forEach(x => svg.appendChild(x));
+
+  // markers
+  const defs = el("defs", {});
+  [["sa", "mk"], ["sr", "mk-r"], ["sk", "mk-k"]].forEach(([id, cls]) => {
+    const m = el("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto" });
+    m.appendChild(el("path", { class: cls, d: "M0,0 L10,5 L0,10 z" }));
+    defs.appendChild(m);
+  });
+  svg.prepend(defs);
+
+  // lane headers
+  const headTop = 14, headH = 50, startY = headTop + headH + 16;
+  for (const k in lanes) {
+    const L = lanes[k];
+    g.heads.appendChild(el("rect", { class: k === "actors" ? "bx-a" : k === "relay" ? "bx-r" : k === "cloud" ? "bx-s" : "bx", x: L.x - 100, y: headTop, width: 200, height: headH, rx: 10 }));
+    g.heads.appendChild(el("text", { class: "t2 c", x: L.x, y: headTop + 21 }, L.t));
+    g.heads.appendChild(el("text", { class: "s c", x: L.x, y: headTop + 39 }, L.s));
+  }
+
+  const rowH = 34, bandHead = 34, bandPad = 10;
+  let y = startY;
+  bands.forEach((b, i) => {
+    const top = y;
+    const h = bandHead + b.m.length * rowH + (b.m.length ? bandPad : 0);
+    g.bands.appendChild(el("rect", { class: b.kill ? "band-k" : (i % 2 ? "band2" : "band"), x: 10, y: top, width: 1380, height: h, rx: 6 }));
+    const head = el("text", { class: "bh" + (b.kill ? " bh-k" : ""), x: 24, y: top + 22, style: "stroke: var(" + (b.kill ? "--killbg" : (i % 2 ? "--band2" : "--band")) + ")" });
+    head.appendChild(document.createTextNode(b.h + "   "));
+    const ts = el("tspan", { class: "bh-s" }, b.st);
+    head.appendChild(ts);
+    g.heads.appendChild(head);
+
+    // lifelines for this band
+    for (const k in lanes) {
+      const down = (b.down || []).includes(k);
+      g.life.appendChild(el("line", { class: down ? "life-down" : "life", x1: lanes[k].x, y1: top, x2: lanes[k].x, y2: top + h }));
+      if (down) {
+        const t = el("text", { class: "lbl-k c", x: lanes[k].x, y: top + h - 8 }, "✕ 进程不在");
+        g.heads.appendChild(t);
+      }
+    }
+
+    b.m.forEach((msg, j) => {
+      const [from, to, label, kind] = msg;
+      const yy = top + bandHead + j * rowH + 22;
+      const x1 = lanes[from].x, x2 = lanes[to].x;
+      const dir = Math.sign(x2 - x1);
+      const cls = kind === "r" ? "ln-r" : kind === "k" ? "ln-k" : "ln";
+      const mk = kind === "r" ? "sr" : kind === "k" ? "sk" : "sa";
+      g.msgs.appendChild(el("line", { class: cls, x1: x1 + dir * 3, y1: yy, x2: x2 - dir * 4, y2: yy, "marker-end": "url(#" + mk + ")" }));
+      if (kind === "k") g.msgs.appendChild(el("text", { class: "lbl-k c", x: x2 - dir * 16, y: yy + 5, "font-size": 14, "font-weight": 700 }, "✕"));
+      const tcls = kind === "r" ? "lbl-r c" : kind === "k" ? "lbl-k c" : "lbl c";
+      const tx = el("text", { class: tcls + (/[a-z(]/.test(label) ? "" : ""), x: (x1 + x2) / 2, y: yy - 7 }, label);
+      g.msgs.appendChild(tx);
+      const bb = tx.getBBox();
+      const bg = el("rect", { class: "lblbg", x: bb.x - 4, y: bb.y - 1, width: bb.width + 8, height: bb.height + 2, rx: 3 });
+      g.msgs.insertBefore(bg, tx);
+    });
+    y = top + h + 6;
+  });
+  svg.setAttribute("viewBox", "0 0 1400 " + (y + 8));
+})();
+</script>
+</body>
+</html>
