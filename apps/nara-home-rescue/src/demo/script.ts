@@ -35,7 +35,7 @@ export const STAGES: { id: StageId; label: string }[] = [
   { id: "remembered", label: "Home Twin updated" },
 ];
 
-const BASE_HISTORY: HistoryEntry[] = [
+export const BASE_HISTORY: HistoryEntry[] = [
   {
     id: "cap-2023",
     year: "2023",
@@ -124,6 +124,17 @@ export type DemoFrame = {
   history: HistoryEntry[];
   highlightHistory: boolean;
   events: ActivityEvent[];
+  /** Present in live mode only; values come from the ServiceCase actor. */
+  live?: {
+    issue: string;
+    requestedSlot: string;
+    offeredSlot?: string;
+    confirmedSlot?: string;
+    assessment?: string;
+    workerPid?: number;
+    recovery?: { previousPid: number; pid: number; fromCheckpoint: string };
+    canConfirm: boolean;
+  };
 };
 
 export function frameAt(index: number): DemoFrame {

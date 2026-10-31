@@ -1,7 +1,7 @@
 /**
  * Case vocabulary from docs/prd.txt.
- * These types describe the demo read model. They are not a live actor schema.
- * The repository's only generated actor is Smoke.
+ * These types describe the read model the three panes render, in both the
+ * scripted and the live mode (`src/data/live.ts` fills them from the actor).
  */
 
 export type CaseStatus =
@@ -11,7 +11,8 @@ export type CaseStatus =
   | "awaiting_provider"
   | "recovering"
   | "negotiating"
-  | "confirmed";
+  | "confirmed"
+  | "failed";
 
 export type AgentName = "diagnostic" | "dispatch" | "provider" | "actor" | "relay";
 
@@ -22,7 +23,7 @@ export type ActivityEvent = {
   title: string;
   detail: string;
   /** True when the row is scripted UI, not a backend message. */
-  simulated: true;
+  simulated: boolean;
 };
 
 export type HistoryEntry = {

@@ -1,7 +1,13 @@
 import { ALTERNATE_SLOT } from "@/contracts/case";
 import type { DemoFrame } from "@/demo/script";
 
-export function HomeownerPane({ frame }: { frame: DemoFrame }) {
+export function HomeownerPane({
+  frame,
+  onReport,
+}: {
+  frame: DemoFrame;
+  onReport?: () => void;
+}) {
   return (
     <section aria-label="Homeowner" className="flex min-h-0 flex-col">
       <p className="mb-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-muted">
@@ -51,19 +57,23 @@ export function HomeownerPane({ frame }: { frame: DemoFrame }) {
             </ul>
           </article>
 
-          <HomeownerMoment frame={frame} />
+          <HomeownerMoment frame={frame} onReport={onReport} />
         </div>
       </div>
     </section>
   );
 }
 
-function HomeownerMoment({ frame }: { frame: DemoFrame }) {
+function HomeownerMoment({ frame, onReport }: { frame: DemoFrame; onReport?: () => void }) {
   if (frame.homeowner === "twin") {
-    return (
-      <div className="rounded-full bg-sage px-4 py-3 text-center text-[16px] font-semibold text-cream">
+    const className =
+      "w-full rounded-full bg-sage px-4 py-3 text-center text-[16px] font-semibold text-cream";
+    return onReport ? (
+      <button type="button" onClick={onReport} className={className}>
         Report a problem
-      </div>
+      </button>
+    ) : (
+      <div className={className}>Report a problem</div>
     );
   }
 
@@ -71,7 +81,9 @@ function HomeownerMoment({ frame }: { frame: DemoFrame }) {
     <div key={frame.homeowner} className="rise space-y-3">
       <article className="rounded-[22px] bg-sand/70 p-4">
         <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-muted">You</p>
-        <p className="nara-serif mt-1 text-[22px] leading-tight">My AC isn’t cooling.</p>
+        <p className="nara-serif mt-1 text-[22px] leading-tight">
+          {frame.live?.issue || "My AC isn’t cooling."}
+        </p>
       </article>
       {frame.homeowner === "submitted" || frame.homeowner === "reading" ? (
         <p className="text-[16px] leading-snug text-ink/80">
@@ -86,15 +98,15 @@ function HomeownerMoment({ frame }: { frame: DemoFrame }) {
             Nara’s assessment
           </p>
           <p className="mt-2 text-[16px] leading-snug text-ink">
-            Air is moving inside. The outdoor unit is not running. The 2023 capacitor
-            replacement is useful context for the technician. It is not a confirmed fault.
+            {frame.live?.assessment ??
+              "Air is moving inside. The outdoor unit is not running. The 2023 capacitor replacement is useful context for the technician. It is not a confirmed fault."}
           </p>
         </article>
       ) : null}
       {frame.homeowner === "arranging" ? (
         <p className="text-[16px] leading-snug text-ink/80">
           {frame.slot === "counteroffer"
-            ? `Cool Air Mechanical can come ${ALTERNATE_SLOT}.`
+            ? `Cool Air Mechanical can come ${frame.live?.offeredSlot ?? ALTERNATE_SLOT}.`
             : "A technician-ready request is with Cool Air Mechanical."}
         </p>
       ) : null}
@@ -103,7 +115,9 @@ function HomeownerMoment({ frame }: { frame: DemoFrame }) {
           <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-sage-deep">
             Confirmed
           </p>
-          <p className="nara-serif mt-1 text-[24px] leading-tight">{ALTERNATE_SLOT}</p>
+          <p className="nara-serif mt-1 text-[24px] leading-tight">
+            {frame.live?.confirmedSlot ?? ALTERNATE_SLOT}
+          </p>
           <p className="mt-1 text-[15px] text-ink/75">Cool Air Mechanical</p>
           {frame.stage === "remembered" ? (
             <p className="mt-2 text-[15px] font-medium text-sage-deep">Saved on this home.</p>

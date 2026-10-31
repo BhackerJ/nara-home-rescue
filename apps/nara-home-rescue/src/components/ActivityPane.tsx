@@ -32,12 +32,25 @@ export function ActivityPane({ frame }: { frame: DemoFrame }) {
       {open ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] bg-cream ring-1 ring-line/80">
           <div className="border-b border-line/80 px-4 py-3">
-            <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-gold">
-              Simulated
-            </p>
-            <p className="mt-1 text-[15px] leading-snug text-ink/80">
-              Scripted for this screen. Not live actor or Relay traffic.
-            </p>
+            {frame.live ? (
+              <>
+                <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-sage-deep">
+                  Live
+                </p>
+                <p className="mt-1 text-[15px] leading-snug text-ink/80">
+                  Events from the Durable Actors case and messages over Agent Relay.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-gold">
+                  Simulated
+                </p>
+                <p className="mt-1 text-[15px] leading-snug text-ink/80">
+                  Scripted for this screen. Not live actor or Relay traffic.
+                </p>
+              </>
+            )}
             <p className="mt-2 font-mono text-[13px] text-muted">
               {frame.caseOpen ? frame.caseId : "no case"} · {frame.status} · {frame.checkpoint}
             </p>
@@ -57,7 +70,7 @@ export function ActivityPane({ frame }: { frame: DemoFrame }) {
         </div>
       ) : (
         <p className="rounded-[28px] bg-cream px-4 py-6 text-[15px] text-ink/70 ring-1 ring-line/80">
-          {frame.events.length} simulated events hidden.
+          {frame.events.length} {frame.live ? "" : "simulated "}events hidden.
         </p>
       )}
     </section>
